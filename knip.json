@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreBinaries": ["rustup", "plutil", "lipo"],
+  "entry": [
+    "ui/phone-download.worker.ts",
+    "desktop/main.cjs", "desktop/preload.cjs", "public/phone-sw.js",
+    "scripts/*.mjs"
+  ],
+  "project": [
+    "ui/**/*.{ts,tsx}", "desktop/**/*.cjs", "public/**/*.js",
+    "scripts/**/*.mjs", "tests/ui/**/*.ts", "*.config.{ts,js}"
+  ]
+}

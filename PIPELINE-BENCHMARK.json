@@ -1,0 +1,189 @@
+{
+  "measuredAt": "2026-10-16T18:12:22.576228+00:00",
+  "fixture": "128 MiB sparse zeros; Rust TLS loopback, release build, hashing and approval included; not Wi-Fi",
+  "before": {
+    "measuredAt": "2026-10-16T17:46:13.702593+00:00",
+    "fixture": "128 MiB sparse zeros; Rust TLS loopback, release build, hashing and approval included; not Wi-Fi",
+    "runs": [
+      {
+        "bytes": 134217728,
+        "seconds": 3.314,
+        "MiBps": 38.62
+      },
+      {
+        "bytes": 134217728,
+        "seconds": 3.141,
+        "MiBps": 40.75
+      },
+      {
+        "bytes": 134217728,
+        "seconds": 3.302,
+        "MiBps": 38.76
+      }
+    ]
+  },
+  "beforeMedianMiBps": 38.76,
+  "afterMedianMiBps": 59.57,
+  "medianChangePercent": 53.68937048503612,
+  "notHotspotOrBlipComparison": true,
+  "memoryBound": "two 16 MiB application payload windows (32 MiB) on sender; one 16 MiB window route body admitted at receiver; excludes Tokio/HTTP/TLS/OS buffers and legacy requests",
+  "receiverDurability": "sync_data and durable offset transaction BEFORE each negotiated window ACK; legacy chunks unchanged",
+  "pipelineOnlyRuns": [
+    {
+      "bytes": 134217728,
+      "seconds": 3.091,
+      "MiBps": 41.41
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.95,
+      "MiBps": 43.39
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.958,
+      "MiBps": 43.27
+    }
+  ],
+  "pipelineOnlyMedianMiBps": 43.27,
+  "after": [
+    {
+      "bytes": 134217728,
+      "seconds": 2.112,
+      "MiBps": 60.6
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.193,
+      "MiBps": 58.37
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.151,
+      "MiBps": 59.52
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.149,
+      "MiBps": 59.57
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.138,
+      "MiBps": 59.88
+    }
+  ],
+  "senderProgress": "checkpoint at most every 250ms plus file boundaries; receiver remains resume authority",
+  "priorCheckpointRuns": [
+    {
+      "bytes": 134217728,
+      "seconds": 2.581,
+      "MiBps": 49.6
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.495,
+      "MiBps": 51.31
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.912,
+      "MiBps": 43.96
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.845,
+      "MiBps": 44.98
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.587,
+      "MiBps": 49.47
+    }
+  ],
+  "caveats": "128 MiB sparse zero-filled release-mode TLS localhost transfers. This final repeat launched no competing build/test jobs; prior window trials overlapped platform builds and are retained separately. Sequential small-sample trials; not phone/hotspot/Blip measurements.",
+  "eightMiBCheckpointRuns": [
+    {
+      "bytes": 134217728,
+      "seconds": 2.964,
+      "MiBps": 43.18
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.829,
+      "MiBps": 45.25
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.823,
+      "MiBps": 45.34
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.941,
+      "MiBps": 43.53
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.664,
+      "MiBps": 48.05
+    }
+  ],
+  "eightMiBCheckpointMedianMiBps": 45.25,
+  "durableWindowBytes": 16777216,
+  "loadedWindowTrials": [
+    {
+      "bytes": 134217728,
+      "seconds": 2.356,
+      "MiBps": 54.32
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.45,
+      "MiBps": 52.25
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 3.065,
+      "MiBps": 41.77
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 3.525,
+      "MiBps": 36.31
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 3.199,
+      "MiBps": 40.02
+    }
+  ],
+  "isolatedWindowRepeatBeforeAddressFix": [
+    {
+      "bytes": 134217728,
+      "seconds": 2.388,
+      "MiBps": 53.59
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.17,
+      "MiBps": 58.99
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.285,
+      "MiBps": 56.01
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.136,
+      "MiBps": 59.92
+    },
+    {
+      "bytes": 134217728,
+      "seconds": 2.125,
+      "MiBps": 60.24
+    }
+  ],
+  "finalSourceIncludesHotspotAddressSelection": true
+}

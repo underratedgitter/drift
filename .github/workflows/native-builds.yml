@@ -1,0 +1,154 @@
+name: Native development builds and runtime checks
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        default: all
+        options: [all, macos, windows, android, ios-simulator]
+permissions:
+  contents: read
+jobs:
+  macos:
+    if: inputs.platform == 'all' || inputs.platform == 'macos'
+    name: macOS native (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {runner: macos-15-intel, arch: x64}
+          - {runner: macos-15, arch: arm64}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm}
+      - run: rustup update stable
+      - run: npm ci
+      - name: Verify native runner architecture
+        run: node -e "if (process.platform !== 'darwin' || process.arch !== '${{ matrix.arch }}') process.exit(1)"
+      - run: npm run typecheck && npm run lint && npm run audit:unused
+      - run: npm run test:build-config && npm run test:release-tools
+      - run: cargo test --manifest-path engine/Cargo.toml
+      - run: npm run test:native
+      - run: npm run mac:installer
+      - run: npx playwright install chromium webkit
+      - name: Native browser and packaged startup checks
+        run: npm run test:ui -- --reporter=line,json
+        env:
+          DRIFT_TEST_WEBKIT: '1'
+          PLAYWRIGHT_JSON_OUTPUT_NAME: release/runtime-ui.json
+      - name: Bundled-engine packaged transfer checks
+        run: npx playwright test tests/ui/desktop-phone.spec.ts --grep 'packaged app and Chromium' --reporter=line,json
+        env:
+          DRIFT_TEST_PACKAGED_TRANSFERS: '1'
+          PLAYWRIGHT_JSON_OUTPUT_NAME: release/runtime-packaged.json
+      - name: Record host, not a production-readiness certificate
+        if: always()
+        run: node -e "require('node:fs').mkdirSync('release',{recursive:true});require('node:fs').writeFileSync('release/runtime-host.json',JSON.stringify({platform:process.platform,architecture:process.arch,os:require('node:os').release(),commit:process.env.GITHUB_SHA,physicalNetworkTested:false,productionSigned:false},null,2))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drift-macos-${{ matrix.arch }}-runtime-evidence
+          path: |
+            release/runtime-*.json
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-macos-${{ matrix.arch }}-development-installer
+          path: |
+            release/*.dmg
+            release/BUILD-darwin.json
+          if-no-files-found: error
+  windows:
+    if: inputs.platform == 'all' || inputs.platform == 'windows'
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm}
+      - run: rustup update stable
+      - run: npm ci
+      - name: Verify native runner architecture
+        run: node -e "if (process.platform !== 'win32' || process.arch !== 'x64') process.exit(1)"
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:build-config
+      - run: npm run test:release-tools
+      - run: cargo test --manifest-path engine/Cargo.toml
+      - run: npm run windows:installer
+      - run: npx playwright install chromium webkit
+      - name: Native browser and unpacked packaged startup checks
+        run: npm run test:ui -- --reporter=line,json
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: release/runtime-ui.json
+      - name: Bundled-engine packaged transfer checks
+        run: npx playwright test tests/ui/desktop-phone.spec.ts --grep 'packaged app and Chromium' --reporter=line,json
+        env:
+          DRIFT_TEST_PACKAGED_TRANSFERS: '1'
+          PLAYWRIGHT_JSON_OUTPUT_NAME: release/runtime-packaged.json
+      - name: Record host, not an installer test or signing certificate
+        if: always()
+        run: node -e "require('node:fs').mkdirSync('release',{recursive:true});require('node:fs').writeFileSync('release/runtime-host.json',JSON.stringify({platform:process.platform,architecture:process.arch,os:require('node:os').release(),commit:process.env.GITHUB_SHA,installerInstalled:false,physicalNetworkTested:false,productionSigned:false},null,2))"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drift-windows-x64-runtime-evidence
+          path: |
+            release/runtime-*.json
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-windows-development-installer
+          path: |
+            release/*.exe
+            release/BUILD-win32.json
+          if-no-files-found: error
+  android:
+    if: inputs.platform == 'all' || inputs.platform == 'android'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm}
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - run: rustup update stable
+      - run: npm ci
+      # SDK license acceptance is explicitly authorized for this project's build tooling.
+      - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.0.13004108'
+      - run: npm run android:package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-android-development-apk
+          path: release/android/*
+          if-no-files-found: error
+  ios-simulator:
+    if: inputs.platform == 'all' || inputs.platform == 'ios-simulator'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '24', cache: npm}
+      - run: rustup update stable
+      - run: npm ci
+      - run: npm run ios:simulator
+      - run: ditto -c -k --sequesterRsrc --keepParent release/ios/SimulatorBuild/Build/Products/Release-iphonesimulator/Drift.app release/ios/Drift-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: drift-ios-simulator-NOT-device-ipa
+          path: release/ios/Drift-simulator.zip
+          if-no-files-found: error
+# This workflow is prepared, not executed locally. There is no automatic release,
+# App Store upload, repository publication or signing-key import. Device IPA export
+# is a separate owner-controlled build requiring Apple signing/provisioning.
+# Desktop runtime checks execute on matching native runners, but Windows NSIS
+# installation/uninstallation, physical LAN behavior and mobile devices still
+# require the manual scenarios in RELEASE-GATES.md. No runner has been dispatched
+# by preparing this workflow, and hosted-runner billing requires owner approval.

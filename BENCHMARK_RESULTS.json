@@ -1,0 +1,37 @@
+{
+  "measuredAt": "2026-10-16T10:35:08.505Z",
+  "platform": "darwin",
+  "architecture": "x64",
+  "scenario": "Two Rust engines in one release-mode test process; TLS loopback; sparse zero-filled fixture; includes hashing, scripted approval and verification; excludes browser staging. Not a Wi-Fi or AirDrop result.",
+  "chunkBytes": 8388608,
+  "runs": [
+    {
+      "bytes": 268435456,
+      "seconds": 5.583,
+      "mebibytesPerSecond": 45.85
+    },
+    {
+      "bytes": 268435456,
+      "seconds": 5.282,
+      "mebibytesPerSecond": 48.47
+    },
+    {
+      "bytes": 268435456,
+      "seconds": 5.272,
+      "mebibytesPerSecond": 48.56
+    },
+    {
+      "bytes": 268435456,
+      "seconds": 5.252,
+      "mebibytesPerSecond": 48.74
+    },
+    {
+      "bytes": 268435456,
+      "seconds": 5.172,
+      "mebibytesPerSecond": 49.5
+    }
+  ],
+  "medianSeconds": 5.272,
+  "p95Seconds": 5.583,
+  "medianMebibytesPerSecond": 48.56
+}

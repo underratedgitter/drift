@@ -1,0 +1,5 @@
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false"/>
+    <!-- Only the app's authenticated loopback UI uses HTTP; peer transfers use Rust TLS. -->
+    <domain-config cleartextTrafficPermitted="true"><domain>127.0.0.1</domain><domain>localhost</domain></domain-config>
+</network-security-config>
