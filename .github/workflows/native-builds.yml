@@ -122,6 +122,8 @@ jobs:
       - run: rustup update stable
       - run: npm ci
       # SDK license acceptance is explicitly authorized for this project's build tooling.
+      # GitHub's Ubuntu image ships sdkmanager under ANDROID_HOME, not on PATH.
+      - run: echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.0.13004108'
       - run: npm run android:package
       - uses: actions/upload-artifact@v4

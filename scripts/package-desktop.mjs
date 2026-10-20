@@ -25,7 +25,8 @@ if (rustTarget) {
   const actual = execFileSync('lipo', ['-archs', engine], { encoding: 'utf8' }).trim();
   if (actual !== (architecture === 'arm64' ? 'arm64' : 'x86_64')) throw new Error(`Rust engine architecture mismatch: ${actual}`);
 }
-const artifacts = await build({ targets: Platform.current().createTarget(target, architecture === 'arm64' ? Arch.arm64 : Arch.x64), config: {
+// Development builds are never published; in CI electron-builder otherwise tries a GitHub release.
+const artifacts = await build({ targets: Platform.current().createTarget(target, architecture === 'arm64' ? Arch.arm64 : Arch.x64), publish: 'never', config: {
   appId: 'local.drift.transfer', productName: 'Drift', electronVersion: electron,
   // A host runtime must never be copied into an app for another architecture.
   ...(cross ? {} : { electronDist: 'node_modules/electron/dist' }),
