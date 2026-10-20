@@ -158,7 +158,14 @@ async fn state(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
         connections.extend(sessions.values().filter(|session| ids.contains(&session.id) && session.approved).map(|session| json!({"id":format!("phone:{}",session.id),"name":session.name,"confirmed":session.confirmed,"phone":true})));
     }
     let sessions: Vec<_> = engine.sessions.lock().await.values().cloned().collect();
-    let invitation = engine.pairing.lock().await.invitation.clone();
+    let invitation = {
+        let mut pairing = engine.pairing.lock().await;
+        // An expired code is useless; replace it before anyone copies it.
+        if pairing.invitation.expires <= crate::model::now() {
+            *pairing = Pairing::new(pairing.invitation.host.clone(), pairing.invitation.port);
+        }
+        pairing.invitation.clone()
+    };
     let discovery_error = engine.discovery_error.lock().unwrap().clone();
     let last_error = engine.last_error.lock().await.clone();
     Ok(Json(
@@ -299,6 +306,9 @@ async fn stage(
     )?;
     file.seek(std::io::SeekFrom::Start(query.offset)).await?;
     file.write_all(&bytes).await?;
+    // Tokio hands the write to a background thread; without this flush the reply
+    // can beat the bytes to disk, and the next piece fails "Staging offset mismatch".
+    file.flush().await?;
     Ok(Json(json!({"offset":query.offset + bytes.len() as u64})))
 }
 #[derive(Deserialize)]

@@ -11,10 +11,21 @@ use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 const RECORDS: TableDefinition<&str, &str> = TableDefinition::new("transfers");
 
+/// How often receive progress is committed to the history database. File bytes
+/// are synced before their offset advances, so after a crash the recorded offset
+/// lags by at most this interval and those bytes are simply sent again; it never
+/// claims data that is not on disk. Committing on every chunk made many-file
+/// transfers quadratic: each small file rewrote and synced the whole record.
+const PROGRESS_COMMIT: std::time::Duration = std::time::Duration::from_millis(250);
+
+type Live = std::collections::HashMap<String, (Transfer, std::time::Instant)>;
+
 #[derive(Clone)]
 pub struct Store {
     pub root: PathBuf,
     db: Arc<Database>,
+    // Receive progress newer than its last database commit (see PROGRESS_COMMIT).
+    live: Arc<std::sync::Mutex<Live>>,
 }
 
 pub fn safe_path(path: &str) -> Result<()> {
@@ -125,10 +136,40 @@ impl Store {
             tx.open_table(RECORDS)?;
         }
         tx.commit()?;
-        Ok(Self {
+        let store = Self {
             root,
             db: Arc::new(db),
-        })
+            live: Arc::default(),
+        };
+        store.settle_after_restart()?;
+        Ok(store)
+    }
+
+    // Sessions never survive a restart, so a transfer that was moving when Drift
+    // closed cannot still be "sending". Show it as resumable instead of frozen.
+    fn settle_after_restart(&self) -> Result<()> {
+        // Prepared batches live only in memory, so after a restart nothing can use
+        // the copies staged for them; delete them instead of keeping hidden gigabytes.
+        if let Err(error) = std::fs::remove_dir_all(self.root.join("outbox"))
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            eprintln!("Could not clear old prepared copies: {error}");
+        }
+        for mut transfer in self.list()? {
+            // Receivers keep their state: the next offer of the same files resumes it.
+            let interrupted = transfer.direction == "send"
+                && ["sending", "awaiting approval", "verifying"]
+                    .contains(&transfer.status.as_str());
+            if interrupted {
+                transfer.status = "interrupted".into();
+                transfer.error = Some(
+                    "Drift closed during this transfer. Choose the same files again to resume."
+                        .into(),
+                );
+                self.save(&transfer)?;
+            }
+        }
+        Ok(())
     }
 
     pub fn save(&self, transfer: &Transfer) -> Result<()> {
@@ -140,22 +181,55 @@ impl Store {
             )?;
         }
         tx.commit()?;
+        // The committed record is now the newest state.
+        self.live.lock().unwrap().remove(&transfer.id);
+        Ok(())
+    }
+
+    // Records receive progress, committing it at most every PROGRESS_COMMIT.
+    fn save_progress(&self, transfer: &Transfer) -> Result<()> {
+        let committed = self
+            .live
+            .lock()
+            .unwrap()
+            .get(&transfer.id)
+            .map(|(_, at)| *at);
+        let at = match committed {
+            Some(at) if at.elapsed() < PROGRESS_COMMIT => at,
+            _ => {
+                self.save(transfer)?;
+                std::time::Instant::now()
+            }
+        };
+        self.live
+            .lock()
+            .unwrap()
+            .insert(transfer.id.clone(), (transfer.clone(), at));
         Ok(())
     }
 
     pub fn list(&self) -> Result<Vec<Transfer>> {
         let tx = self.db.begin_read()?;
         let table = tx.open_table(RECORDS)?;
+        let live = self.live.lock().unwrap();
         let mut result = Vec::new();
         for row in table.iter()? {
             let (_, value) = row?;
-            result.push(serde_json::from_str(value.value())?);
+            let transfer: Transfer = serde_json::from_str(value.value())?;
+            result.push(match live.get(&transfer.id) {
+                Some((newer, _)) => newer.clone(),
+                None => transfer,
+            });
         }
+        drop(live);
         result.sort_by_key(|t: &Transfer| std::cmp::Reverse(t.updated));
         Ok(result)
     }
 
     pub fn get(&self, id: &str) -> Result<Transfer> {
+        if let Some((transfer, _)) = self.live.lock().unwrap().get(id) {
+            return Ok(transfer.clone());
+        }
         let tx = self.db.begin_read()?;
         let table = tx.open_table(RECORDS)?;
         let value = table.get(id)?.context("Transfer not found")?;
@@ -246,7 +320,7 @@ impl Store {
         file.sync_data().await?;
         transfer.offsets[index] += bytes.len() as u64;
         transfer.updated = crate::model::now();
-        self.save(transfer)?;
+        self.save_progress(transfer)?;
         Ok(())
     }
 
@@ -333,6 +407,18 @@ impl Store {
         transfer.status = "complete".into();
         transfer.updated = crate::model::now();
         self.save(transfer)?;
+        // Completion is now durable, so the private partial copies (hard links to
+        // the published files on desktop) are no longer needed for recovery.
+        // Leaving them would keep deleted received files on disk invisibly.
+        let partial = self.root.join("partial").join(&transfer.id);
+        if let Err(error) = tokio::fs::remove_dir_all(&partial).await
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            eprintln!(
+                "Could not remove recovery files for {}: {error}",
+                transfer.id
+            );
+        }
         Ok(())
     }
 }

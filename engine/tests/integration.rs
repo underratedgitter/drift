@@ -247,19 +247,34 @@ async fn clearing_history_and_resending_never_truncates_published_hard_links() {
         .await
         .unwrap();
     receiver.engine.store.clear_history().unwrap();
-    let resumed = offer(&receiver, &connection, &entries).await;
-    assert_eq!(resumed.offsets[0], bytes.len() as u64);
-    assert!(
-        connection
-            .chunk(&resumed.id, 0, 0, b"overwrite".to_vec())
-            .await
-            .is_err()
-    );
+    // Sending the same files again after the first copy finished delivers a
+    // separate second copy; it never writes into the already-published files.
+    let again = offer(&receiver, &connection, &entries).await;
+    assert_eq!(again.id, format!("{}-2", transfer.id));
+    assert_eq!(again.offsets[0], 0);
+    connection
+        .chunk(&again.id, 0, 0, bytes.to_vec())
+        .await
+        .unwrap();
     let finished: Transfer = connection
-        .post(&format!("/transfer/{}/finish", resumed.id), &())
+        .post(&format!("/transfer/{}/finish", again.id), &())
         .await
         .unwrap();
     assert_eq!(finished.status, "complete");
+    assert_eq!(
+        tokio::fs::read(
+            receiver
+                .engine
+                .store
+                .root
+                .join("received")
+                .join(&again.id)
+                .join("original.txt")
+        )
+        .await
+        .unwrap(),
+        bytes
+    );
     assert_eq!(
         tokio::fs::read(
             root.path()
@@ -318,7 +333,34 @@ async fn pause_retry_and_session_isolation() {
             .await
             .is_err()
     );
-    assert!(other.post::<_, Transfer>("/offer", &entries).await.is_err());
+    // The finished transfer stays private to its session, but the same files
+    // offered again arrive as a separate new copy.
+    let copy: Transfer = other.post("/offer", &entries).await.unwrap();
+    assert_ne!(copy.id, transfer.id);
+    assert!(copy.offsets.iter().all(|offset| *offset == 0));
+}
+
+#[tokio::test]
+async fn another_session_cannot_take_over_an_unfinished_transfer() {
+    let root = tempfile::tempdir().unwrap();
+    let receiver = device(root.path()).await;
+    let connection = paired(&receiver).await;
+    let bytes = b"half of this arrives before the sender disappears";
+    let entries = vec![entry("half.txt", bytes)];
+    let transfer = offer(&receiver, &connection, &entries).await;
+    connection
+        .chunk(&transfer.id, 0, 0, bytes[..4].to_vec())
+        .await
+        .unwrap();
+    let other = paired(&receiver).await;
+    let error = other
+        .post::<_, Transfer>("/offer", &entries)
+        .await
+        .unwrap_err();
+    assert!(
+        error.to_string().contains("belongs to another session"),
+        "{error}"
+    );
 }
 
 #[tokio::test]
@@ -1017,4 +1059,41 @@ fn mdns_discovery_lifecycle() {
         );
         std::thread::sleep(std::time::Duration::from_millis(100));
     }
+}
+
+#[tokio::test]
+async fn finished_transfer_keeps_only_the_published_copy() {
+    let root = tempfile::tempdir().unwrap();
+    let receiver = device(root.path()).await;
+    let connection = paired(&receiver).await;
+    let bytes = b"only the published copy should remain on disk";
+    let entries = vec![entry("kept.txt", bytes)];
+    let transfer = offer(&receiver, &connection, &entries).await;
+    connection
+        .chunk(&transfer.id, 0, 0, bytes.to_vec())
+        .await
+        .unwrap();
+    connection
+        .post::<_, Transfer>(&format!("/transfer/{}/finish", transfer.id), &())
+        .await
+        .unwrap();
+    let data = &receiver.engine.store.root;
+    // Deleting a received file must free its space: no hidden hard link remains.
+    assert!(!data.join("partial").join(&transfer.id).exists());
+    assert_eq!(
+        tokio::fs::read(data.join("received").join(&transfer.id).join("kept.txt"))
+            .await
+            .unwrap(),
+        bytes
+    );
+}
+
+#[test]
+fn reopening_storage_clears_unreachable_prepared_copies() {
+    let root = tempfile::tempdir().unwrap();
+    let staged = root.path().join("outbox").join("batch").join("0");
+    std::fs::create_dir_all(staged.parent().unwrap()).unwrap();
+    std::fs::write(&staged, b"staged before a restart").unwrap();
+    Store::open(root.path().to_owned()).unwrap();
+    assert!(!root.path().join("outbox").exists());
 }

@@ -40,9 +40,7 @@ Retries share immutable byte buffers rather than copying each payload per attemp
 This is disk/network overlap, not multiple unordered HTTP requests in flight.
 One active outgoing send per engine, serialized incoming writes. Files are hashed
 before sending and after receiving. Metadata commits and file syncs protect
-offset recovery. Every receiver ACK still follows file sync and durable metadata
-commit for the entire acknowledged window; the optimization never acknowledges
-volatile bytes. Up to one unacknowledged window may need retransmission after a
+offset recovery. Every receiver ACK still follows a file sync for the acknowledged window, so acknowledged bytes are on disk. Receive progress (offsets) is committed at most every 250 ms instead of per chunk; after a crash the recorded offset may lag and those bytes are re-sent, but it never claims unsynced data. Up to one unacknowledged window may need retransmission after a
 failure. Negotiation is authenticated, memory is capped locally even if a peer
 advertises a larger size, and old peers without `/features` retain eight-MiB
 chunks. Legacy limits are not silently relaxed. Dropping a paused,
@@ -51,8 +49,7 @@ uses hard links; Android uses a verified private copy and atomic rename because
 its sandbox denies hard links.
 Sender progress history is now persisted at roughly 250 ms intervals and file
 boundaries, plus final/error/control transitions, instead of committing after
-every chunk. Only redundant sender bookkeeping is coalesced: receiver disk sync
-and durable offset commits remain per chunk. A fresh sender always resumes from
+every chunk. Receiver disk syncs remain per chunk; offset commits are coalesced to 250 ms because per-chunk commits rewrote the whole transfer record and made many-file transfers quadratic. A fresh sender always resumes from
 the receiver's durable offsets, not its potentially older progress display.
 The initial one-MiB implementation was benchmarked before increasing the chunk
 size, amortizing HTTP round trips and durable commit barriers without weakening

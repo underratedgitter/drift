@@ -66,13 +66,13 @@ contents into the invitation field. There are no permanent credentials in QR cod
 * After switching to a different network, restart Drift so its invitation and
   mDNS advertisement use the new interface address, then pair again. Seamless
   network migration and physical sleep/wake testing remain unfinished.
-* Every received manifest has its own content-derived directory. Duplicate names
+* Every received manifest has its own content-derived directory. Sending the same
+  files again after they arrived delivers a numbered second copy (`<id>-2`). Duplicate names
   in different subdirectories are preserved; case collisions and file/directory
   collisions are rejected. Overwrite is deliberately not available yet.
 * `--data /path` changes the private data directory (default `~/.drift`). Outbox
-  staging requires a local copy of selected files. Partials and outbox copies are
-  retained for recovery, even after cancellation. Close Drift before manually
-  deleting obsolete `outbox/`, `partial/` or `publishing/` contents. Do not edit
+  staging requires a local copy of selected files. Partial copies are kept until a transfer completes, then deleted; prepared outbox copies
+  are cleared each time Drift starts. Close Drift before manually deleting `publishing/` contents. Do not edit
   `history.redb`; use a fresh data directory for a full local reset.
 * Clear history removes completed/cancelled metadata, not files. There is no
   telemetry, cloud account, cloud storage, or persistent trusted-device list.

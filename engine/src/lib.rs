@@ -214,11 +214,12 @@ async fn pair(
         sessions.len() < 64,
         "Too many sessions; restart the app to clear sessions",
     )?;
-    engine
-        .pairing
-        .lock()
-        .await
-        .consume(&engine.fingerprint, &request)?;
+    let mut pairing = engine.pairing.lock().await;
+    pairing.consume(&engine.fingerprint, &request)?;
+    // A code works once; show a fresh one for the next device straight away
+    // instead of leaving the used code on screen.
+    *pairing = Pairing::new(pairing.invitation.host.clone(), pairing.invitation.port);
+    drop(pairing);
     let capability = secret(32);
     let session = Session {
         id: uuid::Uuid::new_v4().to_string(),
@@ -333,7 +334,7 @@ impl Engine {
         validate(&entries)?;
         let remote: Transfer = connection.post("/offer", &entries).await?;
         ensure!(
-            remote.id == manifest_id(&entries) && remote.entries == entries,
+            offered_id_matches(&remote.id, &manifest_id(&entries)) && remote.entries == entries,
             "Peer returned a different manifest"
         );
         ensure!(
@@ -564,7 +565,7 @@ async fn offer(
     let session = engine.auth(&headers, true).await?;
     validate(&entries)?;
     let _lock = engine.writes.lock().await;
-    let id = manifest_id(&entries);
+    let id = offer_id(&engine.store, &manifest_id(&entries))?;
     let owners = engine.owners.lock().await;
     if let Some(owner) = owners.get(&id) {
         check(
@@ -610,6 +611,34 @@ async fn offer(
     engine.store.save(&transfer)?;
     engine.owners.lock().await.insert(id, session.id);
     Ok(Json(transfer))
+}
+// Offering a file list again resumes its unfinished transfer. Once a copy has
+// finished or been cancelled, the same files arrive as a new numbered transfer in
+// their own folder: sending something twice sends it twice.
+fn offer_id(store: &Store, base: &str) -> Result<String> {
+    for n in 1..=1000u32 {
+        let id = if n == 1 {
+            base.to_string()
+        } else {
+            format!("{base}-{n}")
+        };
+        let finished = match store.get(&id) {
+            Ok(transfer) => ["complete", "cancelled"].contains(&transfer.status.as_str()),
+            Err(_) => store.root.join("received").join(&id).exists(),
+        };
+        if !finished {
+            return Ok(id);
+        }
+    }
+    anyhow::bail!("These files were already sent 1,000 times; change them or clear history first")
+}
+// The receiver names a transfer after its file list, plus "-N" for repeat copies.
+fn offered_id_matches(remote: &str, base: &str) -> bool {
+    remote == base
+        || remote
+            .strip_prefix(base)
+            .and_then(|rest| rest.strip_prefix('-'))
+            .is_some_and(|n| !n.is_empty() && n.len() <= 4 && n.bytes().all(|b| b.is_ascii_digit()))
 }
 async fn transfer_status(
     State(engine): State<Shared>,
