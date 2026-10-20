@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { sha256 } from '@noble/hashes/sha2.js';
+import { blake3 } from '@noble/hashes/blake3.js';
 import './phone.css';
 
-type Entry = { path: string; size: number; sha256: string };
+type Entry = { path: string; size: number; blake3: string };
 type Offer = { id: string; entries: Entry[]; offsets: number[]; verified: boolean[]; status: string };
 type Session = { approved: boolean; confirmed: boolean };
 type Snapshot = { name: string; offers: Offer[]; uploads: { id: string; status: string }[] };
@@ -77,7 +77,7 @@ function Phone() {
   }
   function checkStopped() { if (stopped.current) throw new Error('Paused. Select Send / resume or Receive / resume to continue.'); }
   async function hash(file: File): Promise<string> {
-    const hasher = sha256.create();
+    const hasher = blake3.create();
     for (let offset = 0; offset < file.size; offset += CHUNK) { checkStopped(); hasher.update(new Uint8Array(await file.slice(offset, offset + CHUNK).arrayBuffer())); }
     return hex(hasher.digest());
   }
@@ -86,7 +86,7 @@ function Phone() {
     stopped.current = false; setBusy('Checking files…');
     try {
       const entries: Entry[] = [];
-      for (const file of files) { setBusy(`Checking ${file.name}…`); entries.push({ path: file.webkitRelativePath || file.name, size: file.size, sha256: await hash(file) }); }
+      for (const file of files) { setBusy(`Checking ${file.name}…`); entries.push({ path: file.webkitRelativePath || file.name, size: file.size, blake3: await hash(file) }); }
       let transfer = await request<Offer>('/offer', entries);
       activeUpload.current = transfer.id; setBusy('Waiting for approval on the Mac…');
       let attempts = 0;
@@ -120,7 +120,7 @@ function Phone() {
       }
       checkStopped(); setBusy('Verifying files on the Mac…');
       await request(`/transfer/${transfer.id}/finish`, {});
-      setNotice('Files received and SHA-256 verified on the Mac.');
+      setNotice('Files received and verified on the Mac.');
     } finally { setBusy(''); activeUpload.current = ''; }
   }
   async function receive(offer: Offer) {
@@ -141,7 +141,7 @@ function Phone() {
         };
         worker.postMessage({ type: 'receive', id: accepted.id, entries: accepted.entries, capability: cap.current });
       });
-      setNotice('SHA-256 verified. Use Save or Share below to keep your files outside browser storage.');
+      setNotice('Verified. Use Save or Share below to keep your files outside browser storage.');
     } finally { downloadWorker.current?.terminate(); downloadWorker.current = null; setBusy(''); }
   }
 

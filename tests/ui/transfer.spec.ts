@@ -67,8 +67,8 @@ test('two real devices pair, approve and transfer files through the interface', 
   await sendPage.locator('input[type=file]').nth(1).setInputFiles(source);
   await sendPage.getByRole('button', { name: 'Send files', exact: true }).click();
   await receivePage.getByRole('button', { name: /Approve 2 files/ }).click();
-  await expect(receivePage.getByText('SHA-256 verified')).toHaveCount(1, { timeout: 30_000 });
-  await expect(sendPage.getByText('SHA-256 verified')).toHaveCount(1, { timeout: 30_000 });
+  await expect(receivePage.getByText('Verified', { exact: true })).toHaveCount(1, { timeout: 30_000 });
+  await expect(sendPage.getByText('Verified', { exact: true })).toHaveCount(1, { timeout: 30_000 });
   const folders = await readdir(join(receiver.root, 'received'));
   expect(await readFile(join(receiver.root, 'received', folders[0], 'source/test.bin'))).toEqual(payload);
   expect(await readFile(join(receiver.root, 'received', folders[0], 'source/notes.txt'), 'utf8')).toBe('Sent without an account.');
@@ -168,7 +168,7 @@ test('wrong pairing codes fail and pending transfers can be cancelled without pu
   await sendPage.locator('input[type=file]').first().setInputFiles({ name: 'never-approved.txt', mimeType: 'text/plain', buffer: Buffer.from('Do not publish without approval.') });
   await sendPage.getByRole('button', { name: 'Send files', exact: true }).click();
   await expect(receivePage.getByRole('button', { name: /Approve 1 file/ })).toBeVisible();
-  await expect(receivePage.getByText('SHA-256 verified')).toHaveCount(0);
+  await expect(receivePage.getByText('Verified', { exact: true })).toHaveCount(0);
   await sendPage.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(sendPage.locator('.history-status')).toHaveText('cancelled');
   await expect(receivePage.locator('.history-status')).toHaveText('cancelled');

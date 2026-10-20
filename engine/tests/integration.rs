@@ -4,14 +4,13 @@ use drift_engine::{
     storage::{Store, hash_file, safe_path, validate},
     transport::Connection,
 };
-use sha2::{Digest, Sha256};
 use std::{net::SocketAddr, path::Path};
 
 fn entry(path: &str, bytes: &[u8]) -> Entry {
     Entry {
         path: path.into(),
         size: bytes.len() as u64,
-        sha256: hex::encode(Sha256::digest(bytes)),
+        blake3: blake3::hash(bytes).to_hex().to_string(),
     }
 }
 async fn device(root: &Path) -> drift_engine::Running {
@@ -196,7 +195,7 @@ async fn real_tls_folder_transfer_verifies_hash_and_rejects_bad_offsets() {
         .join("received")
         .join(&transfer.id)
         .join("photos/holiday.bin");
-    assert_eq!(hash_file(&path).await.unwrap(), entries[0].sha256);
+    assert_eq!(hash_file(&path).await.unwrap(), entries[0].blake3);
     assert_eq!(
         std::fs::metadata(
             root.path()

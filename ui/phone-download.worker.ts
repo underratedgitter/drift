@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-import { sha256 } from '@noble/hashes/sha2.js';
-type Entry = { path: string; size: number; sha256: string };
+import { blake3 } from '@noble/hashes/blake3.js';
+type Entry = { path: string; size: number; blake3: string };
 type Job = { type: 'receive'; id: string; entries: Entry[]; capability: string };
 type Access = { getSize(): number; read(buffer: Uint8Array, options: { at: number }): number; write(buffer: Uint8Array, options: { at: number }): number; truncate(size: number): void; flush(): void; close(): void };
 type SyncFile = FileSystemFileHandle & { createSyncAccessHandle?: () => Promise<Access> };
@@ -25,16 +25,16 @@ async function receive(job: Job) {
     }
   };
   const progress = async (index: number, offset: number, sha?: string) => {
-    const response = await fetch(`/mobile/progress/${job.id}`, { method: 'POST', headers: { Authorization: `Bearer ${job.capability}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ index, offset, sha256: sha }) });
+    const response = await fetch(`/mobile/progress/${job.id}`, { method: 'POST', headers: { Authorization: `Bearer ${job.capability}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ index, offset, blake3: sha }) });
     if (!response.ok) throw new Error('The Mac paused, cancelled or rejected verification. Ask it to send a fresh offer.');
     await response.json();
   };
   for (let index = 0; index < job.entries.length; index++) {
     check(); const entry = job.entries[index];
-    const handle = await directory.getFileHandle(`${entry.sha256}-${entry.size}.part`, { create: true }) as SyncFile;
+    const handle = await directory.getFileHandle(`${entry.blake3}-${entry.size}.part`, { create: true }) as SyncFile;
     if (!handle.createSyncAccessHandle) throw new Error('This browser lacks streaming private-file access. Update Safari/Chrome. No unverified or whole-memory fallback is used.');
     const file = await handle.createSyncAccessHandle();
-    const hasher = sha256.create();
+    const hasher = blake3.create();
     try {
       if (file.getSize() > entry.size) file.truncate(0);
       let offset = file.getSize();
@@ -70,7 +70,7 @@ async function receive(job: Job) {
       }
       file.flush();
       const digest = Array.from(hasher.digest(), value => value.toString(16).padStart(2, '0')).join('');
-      if (digest !== entry.sha256) { file.truncate(0); file.flush(); throw new Error(`SHA-256 mismatch for ${entry.path}. Nothing was offered for saving. Retry the download.`); }
+      if (digest !== entry.blake3) { file.truncate(0); file.flush(); throw new Error(`Checksum mismatch for ${entry.path}. Nothing was offered for saving. Retry the download.`); }
       await progress(index, offset, digest);
     } finally { try { file.flush(); } finally { file.close(); } }
     const verified = await handle.getFile();

@@ -6,7 +6,6 @@ use drift_engine::{
 };
 use reqwest::{Client, Response};
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use std::{net::SocketAddr, path::Path};
 
 async fn device(root: &Path) -> drift_engine::Running {
@@ -76,7 +75,7 @@ fn entry(path: &str, data: &[u8]) -> Entry {
     Entry {
         path: path.into(),
         size: data.len() as u64,
-        sha256: hex::encode(Sha256::digest(data)),
+        blake3: blake3::hash(data).to_hex().to_string(),
     }
 }
 
@@ -289,7 +288,7 @@ async fn phone_upload_is_approved_chunked_and_verified() {
         )
         .await
         .unwrap(),
-        entries[0].sha256
+        entries[0].blake3
     );
 }
 
@@ -381,7 +380,7 @@ async fn phone_download_uses_only_offered_files_and_verifies_every_empty_file() 
             &phone.hub,
             &cap,
             &format!("/mobile/progress/{id}"),
-            json!({"index":0,"offset":30,"sha256":"bad"})
+            json!({"index":0,"offset":30,"blake3":"bad"})
         )
         .await
         .status()
@@ -393,21 +392,21 @@ async fn phone_download_uses_only_offered_files_and_verifies_every_empty_file() 
         &phone.hub,
         &cap,
         &format!("/mobile/progress/{id}"),
-        json!({"index":0,"offset":30,"sha256":hash}),
+        json!({"index":0,"offset":30,"blake3":hash}),
     )
     .await
     .json()
     .await
     .unwrap();
     assert_eq!(first["status"], "receiving");
-    let empty_hash = hex::encode(Sha256::digest(b""));
+    let empty_hash = blake3::hash(b"").to_hex().to_string();
     for index in 1..=2 {
         let response: Value = post(
             &client,
             &phone.hub,
             &cap,
             &format!("/mobile/progress/{id}"),
-            json!({"index":index,"offset":0,"sha256":empty_hash}),
+            json!({"index":index,"offset":0,"blake3":empty_hash}),
         )
         .await
         .json()

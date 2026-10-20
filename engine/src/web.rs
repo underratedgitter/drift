@@ -244,7 +244,7 @@ async fn batch(
         .map(|f| crate::model::Entry {
             path: f.path.clone(),
             size: f.size,
-            sha256: "0".repeat(64),
+            blake3: "0".repeat(64),
         })
         .collect();
     validate(&dummy)?;
@@ -449,7 +449,7 @@ async fn native_batch(
         .map(|upload| crate::model::Entry {
             path: upload.path.clone(),
             size: upload.size,
-            sha256: "0".repeat(64),
+            blake3: "0".repeat(64),
         })
         .collect();
     validate(&entries)?;

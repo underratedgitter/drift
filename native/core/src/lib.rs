@@ -360,7 +360,7 @@ mod tests {
                 entries: vec![drift_engine::model::Entry {
                     path: "file.txt".into(),
                     size: 3,
-                    sha256: "0".repeat(64),
+                    blake3: "0".repeat(64),
                 }],
                 offsets: vec![3],
                 status: "receiving".into(),

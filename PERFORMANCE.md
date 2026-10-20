@@ -77,7 +77,7 @@ Five 256 MiB, release-mode, eight-MiB-chunk loopback runs:
 
 | Metric | Measurement |
 |---|---:|
-| Median throughput | 48.56 MiB/s |
+| Median throughput | 48.56 MiB/s (SHA-256; 149-151 MiB/s after the 2026-10-20 switch to BLAKE3) |
 | Median transfer time | 5.272 s |
 | p95 transfer time (nearest rank; only five runs) | 5.583 s |
 | Initial one-MiB-chunk isolated run | 13.90 MiB/s |

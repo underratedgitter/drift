@@ -376,7 +376,7 @@ pub async fn create_offer(engine: &Shared, session_id: &str, batch: &str) -> Res
         entries.push(Entry {
             path: upload.path.clone(),
             size: upload.size,
-            sha256: hash_file(&path).await?,
+            blake3: hash_file(&path).await?,
         });
     }
     validate(&entries)?;
@@ -489,7 +489,7 @@ async fn download(
 struct Progress {
     index: usize,
     offset: u64,
-    sha256: Option<String>,
+    blake3: Option<String>,
 }
 async fn progress(
     State(engine): State<Shared>,
@@ -515,21 +515,21 @@ async fn progress(
         local.status != "cancelled" && local.status != "paused",
         "Mac paused or cancelled this offer",
     )?;
-    if let Some(hash) = request.sha256.as_ref() {
+    if let Some(hash) = request.blake3.as_ref() {
         check(
-            request.offset == entry.size && hash == &entry.sha256,
+            request.offset == entry.size && hash == &entry.blake3,
             "Phone integrity check failed",
         )?;
     }
     // Completion requires an explicit verified digest for each file, including empty files.
-    if request.sha256.is_none() {
+    if request.blake3.is_none() {
         check(
             request.offset < entry.size,
             "Send the verified SHA-256 to mark a file complete",
         )?;
     }
     offer.offsets[request.index] = request.offset;
-    if request.sha256.is_some() {
+    if request.blake3.is_some() {
         offer.verified[request.index] = true;
     }
     if offer.verified.iter().all(|verified| *verified) {

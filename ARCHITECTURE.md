@@ -67,7 +67,7 @@ TLS. The receiver explicitly approves, then the sender explicitly confirms.
 Every subsequent request pins the certificate and presents the capability.
 No device advertisement, hostname or display name is an authentication factor.
 
-Manifests contain relative paths, safe-integer sizes and SHA-256 digests, not
+Manifests contain relative paths, safe-integer sizes and BLAKE3 digests, not
 absolute source paths. Receiver approval is per manifest, not just per device.
 Eight MiB chunks are committed in order. Receiver reports durable offsets and
 rejects out-of-order writes. Retries query receiver offsets; partial files and

@@ -328,7 +328,7 @@ impl Engine {
             entries.push(Entry {
                 path: upload.path.clone(),
                 size: upload.size,
-                sha256: hash_file(&path).await?,
+                blake3: hash_file(&path).await?,
             });
         }
         validate(&entries)?;

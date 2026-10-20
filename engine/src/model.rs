@@ -11,7 +11,7 @@ pub const MAX_FILES: usize = 10_000;
 pub struct Entry {
     pub path: String,
     pub size: u64,
-    pub sha256: String,
+    pub blake3: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

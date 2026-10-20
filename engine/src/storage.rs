@@ -1,7 +1,6 @@
 use crate::model::{CHUNK, Entry, MAX_FILES, Transfer};
 use anyhow::{Context, Result, ensure};
 use redb::{Database, ReadableTable, TableDefinition};
-use sha2::{Digest, Sha256};
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
@@ -82,7 +81,7 @@ pub fn validate(entries: &[Entry]) -> Result<()> {
             "Transfer exceeds safe offset range"
         );
         ensure!(
-            entry.sha256.len() == 64 && hex::decode(&entry.sha256).is_ok(),
+            entry.blake3.len() == 64 && hex::decode(&entry.blake3).is_ok(),
             "Invalid SHA-256"
         );
         ensure!(
@@ -106,7 +105,7 @@ pub fn validate(entries: &[Entry]) -> Result<()> {
 
 pub async fn hash_file(path: &Path) -> Result<String> {
     let mut file = tokio::fs::File::open(path).await?;
-    let mut hash = Sha256::new();
+    let mut hash = blake3::Hasher::new();
     let mut chunk = vec![0; CHUNK];
     loop {
         let n = file.read(&mut chunk).await?;
@@ -115,7 +114,7 @@ pub async fn hash_file(path: &Path) -> Result<String> {
         }
         hash.update(&chunk[..n]);
     }
-    Ok(hex::encode(hash.finalize()))
+    Ok(hash.finalize().to_hex().to_string())
 }
 
 impl Store {
@@ -335,7 +334,7 @@ impl Store {
                 let path = destination.join(&entry.path);
                 ensure!(
                     tokio::fs::metadata(&path).await?.len() == entry.size
-                        && hash_file(&path).await? == entry.sha256,
+                        && hash_file(&path).await? == entry.blake3,
                     "Destination conflict: {}",
                     entry.path
                 );
@@ -353,8 +352,8 @@ impl Store {
                 tokio::fs::File::create(&path).await?.sync_all().await?;
             }
             ensure!(
-                hash_file(&path).await? == entry.sha256,
-                "SHA-256 mismatch: {}",
+                hash_file(&path).await? == entry.blake3,
+                "Checksum mismatch: {}",
                 entry.path
             );
         }
@@ -368,7 +367,7 @@ impl Store {
             tokio::fs::create_dir_all(target.parent().unwrap()).await?;
             if target.exists() {
                 ensure!(
-                    hash_file(&target).await? == entry.sha256,
+                    hash_file(&target).await? == entry.blake3,
                     "Publication conflict"
                 );
             } else {
@@ -387,8 +386,8 @@ impl Store {
                     }
                     tokio::fs::File::open(&target).await?.sync_all().await?;
                     ensure!(
-                        hash_file(&target).await? == entry.sha256,
-                        "Publication copy failed SHA-256 verification"
+                        hash_file(&target).await? == entry.blake3,
+                        "Publication copy failed checksum verification"
                     );
                 }
             }
@@ -397,7 +396,7 @@ impl Store {
         if destination.exists() {
             for entry in &transfer.entries {
                 ensure!(
-                    hash_file(&destination.join(&entry.path)).await? == entry.sha256,
+                    hash_file(&destination.join(&entry.path)).await? == entry.blake3,
                     "Destination conflict"
                 );
             }

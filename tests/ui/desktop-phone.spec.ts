@@ -60,7 +60,7 @@ for (const phoneEngine of ['Chromium', 'WebKit']) test(`${packagedTransfers ? 'p
     await phone.locator('input[type=file]').setInputFiles(phoneFile);
     await phone.getByRole('button', { name: 'Send / resume', exact: true }).click();
     await desktop.getByRole('button', { name: /Approve 1 file/ }).click();
-    await expect(phone.locator('.phone-notice')).toContainText('SHA-256 verified on the Mac', { timeout: 30_000 });
+    await expect(phone.locator('.phone-notice')).toContainText('verified on the Mac', { timeout: 30_000 });
     const received = await readdir(join(data, 'received'));
     expect(await readFile(join(data, 'received', received[0], 'from-phone.txt'), 'utf8')).toBe('A real phone-client upload, without an account.');
 
