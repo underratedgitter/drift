@@ -493,9 +493,9 @@ impl Engine {
                 // Receiver ACKs remain fully durable. Sender progress is a UI
                 // cache: after a restart/re-pair, the receiver's offsets win.
                 // Avoid a second fsync transaction on every network chunk.
-                if progress_saved.elapsed() >= std::time::Duration::from_millis(250)
-                    || local.offsets[index] == local.entries[index].size
-                {
+                // Time-based only: committing at every file boundary rewrote the
+                // whole record per file and dominated many-small-file sends.
+                if progress_saved.elapsed() >= std::time::Duration::from_millis(250) {
                     self.store.save(local)?;
                     progress_saved = std::time::Instant::now();
                 }

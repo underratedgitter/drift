@@ -117,6 +117,33 @@ pub async fn hash_file(path: &Path) -> Result<String> {
     Ok(hash.finalize().to_hex().to_string())
 }
 
+// Per-chunk sync that does not empty the drive's write cache. On Apple systems
+// Rust's sync_data issues F_FULLFSYNC, which costs tens of milliseconds, so every
+// small file paid it. Plain fsync still pushes the bytes to the drive; the full
+// barrier (sync_data) runs before every progress commit and at completion, so a
+// committed offset never covers data that is only in the drive's cache.
+async fn sync_chunk(file: &mut tokio::fs::File, barrier: bool) -> Result<()> {
+    if barrier || !cfg!(target_vendor = "apple") {
+        file.sync_data().await?;
+        return Ok(());
+    }
+    file.flush().await?;
+    #[cfg(target_vendor = "apple")]
+    {
+        use std::os::fd::AsRawFd;
+        let fd = file.as_raw_fd();
+        tokio::task::spawn_blocking(move || {
+            if unsafe { libc::fsync(fd) } == 0 {
+                Ok(())
+            } else {
+                Err(std::io::Error::last_os_error())
+            }
+        })
+        .await??;
+    }
+    Ok(())
+}
+
 impl Store {
     pub fn open(root: PathBuf) -> Result<Self> {
         std::fs::create_dir_all(&root)?;
@@ -185,8 +212,18 @@ impl Store {
         Ok(())
     }
 
-    // Records receive progress, committing it at most every PROGRESS_COMMIT.
-    fn save_progress(&self, transfer: &Transfer) -> Result<()> {
+    // Whether receive progress for this transfer is due for a durable commit.
+    fn progress_due(&self, id: &str) -> bool {
+        self.live
+            .lock()
+            .unwrap()
+            .get(id)
+            .is_none_or(|(_, at)| at.elapsed() >= PROGRESS_COMMIT)
+    }
+
+    // Records receive progress; `commit` (from progress_due, decided before the
+    // chunk's sync) makes it durable, otherwise it stays in memory.
+    fn save_progress(&self, transfer: &Transfer, commit: bool) -> Result<()> {
         let committed = self
             .live
             .lock()
@@ -194,7 +231,7 @@ impl Store {
             .get(&transfer.id)
             .map(|(_, at)| *at);
         let at = match committed {
-            Some(at) if at.elapsed() < PROGRESS_COMMIT => at,
+            Some(at) if !commit => at,
             _ => {
                 self.save(transfer)?;
                 std::time::Instant::now()
@@ -316,10 +353,11 @@ impl Store {
         file.set_len(offset).await?;
         file.seek(std::io::SeekFrom::Start(offset)).await?;
         file.write_all(bytes).await?;
-        file.sync_data().await?;
+        let commit = self.progress_due(&transfer.id);
+        sync_chunk(&mut file, commit).await?;
         transfer.offsets[index] += bytes.len() as u64;
         transfer.updated = crate::model::now();
-        self.save_progress(transfer)?;
+        self.save_progress(transfer, commit)?;
         Ok(())
     }
 
@@ -403,6 +441,14 @@ impl Store {
         } else {
             tokio::fs::rename(&pending, &destination).await?;
         }
+        // One full barrier makes every chunk's plain fsync stable before
+        // completion is recorded (see sync_chunk).
+        tokio::fs::OpenOptions::new()
+            .write(true)
+            .open(destination.join(&transfer.entries[0].path))
+            .await?
+            .sync_data()
+            .await?;
         transfer.status = "complete".into();
         transfer.updated = crate::model::now();
         self.save(transfer)?;
