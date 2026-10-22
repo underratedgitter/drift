@@ -2,7 +2,6 @@ use crate::{
     ApiResult, Offset, Shared, Upload, check, constant_eq,
     model::{DeviceHello, Invitation, Session, TrustedDevice, capability_hash, now},
     pairing::{Pairing, secret},
-    selection,
     storage::{safe_path, validate},
     transport::{Connection, Refused},
 };
@@ -11,7 +10,7 @@ use axum::{
     Json, Router,
     body::Bytes,
     extract::{DefaultBodyLimit, Path, Query, Request, State},
-    http::{HeaderMap, HeaderValue, StatusCode, header},
+    http::{HeaderValue, StatusCode, header},
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post, put},
@@ -31,47 +30,6 @@ pub async fn serve(
     serve_router(engine, bind, router).await
 }
 
-pub type AssetLookup = fn(&str) -> Option<&'static [u8]>;
-
-/// Native mobile bundles contain immutable assets, not an unpacked filesystem.
-pub async fn serve_embedded(
-    engine: Shared,
-    bind: SocketAddr,
-    lookup: AssetLookup,
-) -> Result<(SocketAddr, tokio::task::JoinHandle<()>)> {
-    let router = control_routes(engine.clone()).fallback(move |request: Request| async move {
-        if request.method() != axum::http::Method::GET
-            && request.method() != axum::http::Method::HEAD
-        {
-            return StatusCode::METHOD_NOT_ALLOWED.into_response();
-        }
-        let path = request.uri().path().trim_start_matches('/');
-        let path = if path.is_empty() { "index.html" } else { path };
-        if path.split('/').any(|part| part == "." || part == "..") || path.contains('\\') {
-            return StatusCode::NOT_FOUND.into_response();
-        }
-        let Some(bytes) = lookup(path) else {
-            return StatusCode::NOT_FOUND.into_response();
-        };
-        let mime = match path.rsplit('.').next().unwrap_or("") {
-            "html" => "text/html; charset=utf-8",
-            "js" => "text/javascript",
-            "css" => "text/css",
-            "png" => "image/png",
-            "svg" => "image/svg+xml",
-            "webmanifest" => "application/manifest+json",
-            _ => "application/octet-stream",
-        };
-        let body = if request.method() == axum::http::Method::HEAD {
-            &[][..]
-        } else {
-            bytes
-        };
-        ([(header::CONTENT_TYPE, mime)], body).into_response()
-    });
-    serve_router(engine, bind, router).await
-}
-
 /// The control API without a socket, for a native shell that calls it in
 /// process. Requests still need `Authorization: Bearer <ui_token>`.
 pub fn app_router(engine: Shared) -> Router {
@@ -85,6 +43,7 @@ fn control_routes(engine: Shared) -> Router<Shared> {
         .route("/state", get(state))
         .route("/invitation", post(invitation))
         .route("/pair", post(pair))
+        .route("/introduce", post(introduce))
         .route("/session/{id}", post(approve_session))
         .route("/confirm/{id}", post(confirm))
         .route("/receive/{id}", post(receive))
@@ -93,10 +52,6 @@ fn control_routes(engine: Shared) -> Router<Shared> {
         .route("/send", post(send))
         .route("/control/{id}", post(control))
         .route("/history/clear", post(clear_history))
-        .route("/phone", get(phone_info))
-        .route("/phone/invitation", post(phone_invitation))
-        .route("/phone/offer", post(phone_offer))
-        .route("/native/batch", post(native_batch))
         .route("/devices/{id}", post(update_device))
         .route("/devices/{id}/forget", post(forget_device))
         .route_layer(middleware::from_fn_with_state(engine.clone(), authorize));
@@ -167,7 +122,7 @@ async fn state(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
         .map(|(id, c)| match devices.get(id) {
             Some(device) => json!({"id":id,"name":device.name,"os":device.os,"confirmed":true,"remembered":true,"own":device.own,
                 "online": if discovery_running { Value::Bool(nearby.contains(id)) } else { Value::Null }}),
-            None => json!({"id":id,"name":c.name,"os":c.os,"confirmed":c.confirmed}),
+            None => json!({"id":id,"name":c.name,"os":c.os,"confirmed":c.confirmed,"code":c.code}),
         })
         .collect();
     connections.sort_by_key(|device| device["name"].as_str().unwrap_or("").to_lowercase());
@@ -176,11 +131,6 @@ async fn state(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
         .into_iter()
         .filter(|peer| !devices.contains_key(&peer.id))
         .collect();
-    if let Some(hub) = engine.phone.lock().await.clone() {
-        let ids = hub.sessions.lock().unwrap().clone();
-        let sessions = engine.sessions.lock().await;
-        connections.extend(sessions.values().filter(|session| ids.contains(&session.id) && session.approved).map(|session| json!({"id":format!("phone:{}",session.id),"name":session.name,"confirmed":session.confirmed,"phone":true})));
-    }
     let sessions: Vec<_> = engine.sessions.lock().await.values().cloned().collect();
     let invitation = {
         let mut pairing = engine.pairing.lock().await;
@@ -218,6 +168,43 @@ async fn invitation(State(engine): State<Shared>) -> Json<Invitation> {
     *pairing = Pairing::new(pairing.invitation.host.clone(), pairing.invitation.port);
     Json(pairing.invitation.clone())
 }
+fn hello(engine: &Shared) -> (DeviceHello, String) {
+    let capability = secret(32);
+    let hello = DeviceHello {
+        id: engine.fingerprint.clone(),
+        port: engine.port,
+        capability: capability.clone(),
+        os: std::env::consts::OS.into(),
+    };
+    (hello, capability_hash(&capability))
+}
+
+/// Lists a pairing that waits for the other device's approval and finishes it
+/// in the background.
+async fn begin(
+    engine: Shared,
+    connection: Connection,
+    incoming: String,
+    host: String,
+    port: u16,
+) -> Result<()> {
+    check(
+        connection.fingerprint != engine.fingerprint,
+        "This is the same device. Pair with another one.",
+    )?;
+    engine.outgoing_pairs.lock().unwrap().insert(
+        incoming.clone(),
+        (connection.fingerprint.clone(), connection.name.clone()),
+    );
+    engine
+        .connections
+        .lock()
+        .await
+        .insert(connection.session.clone(), connection.clone());
+    tokio::spawn(complete_pairing(engine, connection, incoming, host, port));
+    Ok(())
+}
+
 async fn pair(
     State(engine): State<Shared>,
     Json(invite): Json<Invitation>,
@@ -226,37 +213,43 @@ async fn pair(
         engine.connections.lock().await.len() < 256,
         "Too many devices; forget some in Devices first",
     )?;
-    let capability = secret(32);
-    let hello = DeviceHello {
-        id: engine.fingerprint.clone(),
-        port: engine.port,
-        capability: capability.clone(),
-        os: std::env::consts::OS.into(),
-    };
+    let (hello, incoming) = hello(&engine);
     let connection = Connection::pair_device(&invite, &engine.name, Some(hello)).await?;
-    check(
-        connection.fingerprint != engine.fingerprint,
-        "This is the same device. Pair with another one.",
-    )?;
     let id = connection.session.clone();
-    let hash = capability_hash(&capability);
-    engine.outgoing_pairs.lock().unwrap().insert(
-        hash.clone(),
-        (connection.fingerprint.clone(), connection.name.clone()),
-    );
-    engine
-        .connections
-        .lock()
-        .await
-        .insert(id.clone(), connection.clone());
-    tokio::spawn(complete_pairing(
-        engine,
-        connection,
-        hash,
-        invite.host,
-        invite.port,
-    ));
+    begin(engine, connection, incoming, invite.host, invite.port).await?;
     Ok(Json(json!({"id":id})))
+}
+
+#[derive(Deserialize)]
+struct Nearby {
+    host: String,
+    port: u16,
+    /// The fingerprint discovery advertised for this device, if any.
+    #[serde(default)]
+    id: Option<String>,
+}
+
+/// Tap-to-pair: no code to type; both screens show six digits to compare.
+async fn introduce(
+    State(engine): State<Shared>,
+    Json(nearby): Json<Nearby>,
+) -> ApiResult<Json<Value>> {
+    check(
+        engine.connections.lock().await.len() < 256,
+        "Too many devices; forget some in Devices first",
+    )?;
+    let (hello, incoming) = hello(&engine);
+    let connection = Connection::introduce(
+        &nearby.host,
+        nearby.port,
+        &engine.name,
+        hello,
+        nearby.id.as_deref(),
+    )
+    .await?;
+    let reply = json!({"id": connection.session, "code": connection.code, "name": connection.name});
+    begin(engine, connection, incoming, nearby.host, nearby.port).await?;
+    Ok(Json(reply))
 }
 
 /// Waits for the other device's approval, then remembers it. There is no
@@ -573,47 +566,4 @@ async fn control(
 async fn clear_history(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
     engine.store.clear_history()?;
     Ok(Json(json!({"ok":true})))
-}
-
-async fn phone_info(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
-    if engine.phone.lock().await.is_none() {
-        return Ok(Json(json!({"enabled":false})));
-    }
-    Ok(Json(crate::phone::info(&engine).await?))
-}
-async fn phone_invitation(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
-    let hub = crate::phone::hub(&engine).await?;
-    *hub.enrollment.lock().await = crate::phone::Enrollment::default();
-    Ok(Json(crate::phone::info(&engine).await?))
-}
-#[derive(Deserialize)]
-struct PhoneSend {
-    phone: String,
-    batch: String,
-}
-async fn phone_offer(
-    State(engine): State<Shared>,
-    Json(request): Json<PhoneSend>,
-) -> ApiResult<Json<Value>> {
-    let id = crate::phone::create_offer(&engine, &request.phone, &request.batch).await?;
-    Ok(Json(json!({"id":id})))
-}
-
-async fn native_batch(
-    State(engine): State<Shared>,
-    headers: HeaderMap,
-    Json(files): Json<Vec<selection::Source>>,
-) -> ApiResult<Json<Value>> {
-    let token = headers
-        .get("x-drift-native")
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("");
-    check(
-        engine
-            .native_token
-            .as_ref()
-            .is_some_and(|expected| constant_eq(expected, token)),
-        "Native file selection requires the desktop app",
-    )?;
-    Ok(Json(json!(selection::select(&engine, files).await?)))
 }

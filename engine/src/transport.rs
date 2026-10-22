@@ -1,6 +1,9 @@
 use crate::{
-    model::{DeviceHello, Invitation, PairRequest, TrustedDevice},
-    pairing::{proof, secret, verify},
+    model::{
+        DeviceHello, Introduction, IntroductionReply, Invitation, PairRequest, Reveal,
+        TrustedDevice,
+    },
+    pairing::{commitment, proof, secret, short_code, verify},
 };
 use anyhow::{Context, Result, ensure};
 use reqwest::{Client, Response};
@@ -23,6 +26,8 @@ pub struct Connection {
     pub confirmed: bool,
     /// The peer's certificate fingerprint: its identity on every later connection.
     pub fingerprint: String,
+    /// While tap-to-pair waits for approval: the six digits both screens show.
+    pub code: Option<String>,
     capability: String,
 }
 
@@ -288,6 +293,82 @@ impl Connection {
             os: reply.os,
             confirmed: false,
             fingerprint,
+            code: None,
+        })
+    }
+
+    /// Tap-to-pair with a nearby device: no code to type. Returns a pending
+    /// connection whose `code` the person compares with the other screen.
+    /// `expected` is the identity discovery advertised, checked for
+    /// consistency only; the compared code is what defeats impostors.
+    pub async fn introduce(
+        host: &str,
+        port: u16,
+        name: &str,
+        hello: DeviceHello,
+        expected: Option<&str>,
+    ) -> Result<Self> {
+        lan_host(host)?;
+        ensure!(port > 0, "Invalid port");
+        let base = format!("https://{host}:{port}");
+        let bootstrap = Client::builder()
+            .danger_accept_invalid_certs(true)
+            .tls_info(true)
+            .redirect(reqwest::redirect::Policy::none())
+            .no_proxy()
+            .timeout(Duration::from_secs(15))
+            .build()?;
+        let nonce = secret(32);
+        let own = hello.id.clone();
+        let response = checked(
+            bootstrap
+                .post(format!("{base}/introduce"))
+                .json(&Introduction {
+                    name: name.to_owned(),
+                    device: hello,
+                    commitment: commitment(&nonce),
+                })
+                .send()
+                .await?,
+        )
+        .await?;
+        let der = response
+            .extensions()
+            .get::<reqwest::tls::TlsInfo>()
+            .and_then(|i| i.peer_certificate())
+            .context("TLS certificate missing")?
+            .to_vec();
+        let fingerprint = crate::identity::fingerprint(&der);
+        if let Some(expected) = expected {
+            ensure!(
+                crate::constant_eq(expected, &fingerprint),
+                "That device answered with a different identity. Try again, or pair with a code."
+            );
+        }
+        let introduced: IntroductionReply = decode(response).await?;
+        // Reveal only to the certificate that received the commitment.
+        let client = pinned_client(&fingerprint, Duration::from_secs(30))?;
+        let reply: PairReply = decode(
+            client
+                .post(format!("{base}/introduce/{}/reveal", introduced.id))
+                .json(&Reveal {
+                    nonce: nonce.clone(),
+                })
+                .send()
+                .await?,
+        )
+        .await?;
+        let code = short_code(&fingerprint, &own, &introduced.nonce, &nonce);
+        Ok(Self {
+            client,
+            base,
+            session: reply.session,
+            capability: reply.capability,
+            name: reply.name,
+            os: reply.os,
+            confirmed: false,
+            fingerprint,
+            code: Some(code),
         })
     }
 
@@ -302,6 +383,7 @@ impl Connection {
             os: device.os.clone(),
             confirmed: true,
             fingerprint: device.id.clone(),
+            code: None,
             capability: device.outgoing.clone(),
         })
     }
@@ -448,6 +530,7 @@ mod tests {
                 os: String::new(),
                 confirmed: true,
                 fingerprint: "0".repeat(64),
+                code: None,
                 capability: "test-only".into(),
             };
             let result = connection.window_size().await;

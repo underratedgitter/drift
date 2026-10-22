@@ -1,115 +1,116 @@
 # Drift
 
-Account-free, encrypted **LAN file transfer preview**, with a Rust engine and a
-React interface.
+Send files and folders directly between your Macs, over your own network.
+Encrypted, verified on arrival, no account and no cloud.
 
-**Native installers and mobile builds:** see [native/README.md](native/README.md).
-Development Android APK, Intel macOS DMG and Windows x64 NSIS build commands are
-available. iOS source/Xcode project is prepared but no IPA has been built; full
-Xcode and device signing are still required. These are not production-certified releases.
+- **Tap to pair.** Your other Macs running Drift appear under *Nearby devices*.
+  Click one, check that both screens show the same six digits, and accept.
+- **Pair once.** Paired Macs stay paired after restarts and when their network
+  addresses change, and either one can send to the other.
+- **Your own Macs just work.** Files from Macs you mark as yours arrive without
+  a prompt. Anyone else's file list waits for your approval.
+- **Files land where you look.** Received files go to **Downloads › Drift** with
+  their own names. Taken names become "photo (2).jpg". Nothing is replaced.
+- **Big folders, safely.** Thousands of files or tens of gigabytes. Transfers
+  resume after interruptions, and every file is checked with BLAKE3 before it appears.
+- **Stays out of the way.** Close the window and Drift keeps receiving from the
+  menu bar, with a notification when something arrives.
 
-**Optional Android/iPhone browser companion:** see
-[PHONE-SETUP.md](PHONE-SETUP.md). The generated Mac app is `release/mac/Drift.app`;
-phone setup is in Devices. A one-time, explicit certificate-trust setup is required
-for browser clients only, not the embedded native Android/iOS pairing flow.
-The application never bypasses certificate errors.
+Drift is a side project for macOS 11 or later, as a universal app for Apple
+Silicon and Intel. It is not available for iPhone, iPad, Windows or Android.
 
-## Run
+## Install
 
-Prerequisites: Node 22.12+ (or Node 24), stable Rust/Cargo and the host platform's
-normal Rust build prerequisites. Desktop builds do not require a full Xcode app;
-native iOS builds do. Android needs the JDK/SDK described in the native guide.
+Download the disk image from [Releases](https://github.com/underratedgitter/drift/releases)
+(or the `Drift-macOS` artifact of a recent CI run), open it and drag **Drift** to
+**Applications**.
+
+The app is ad-hoc signed, not notarized by Apple, so macOS blocks it the first
+time. Open it once with **right-click › Open** and confirm. On macOS 15 or later,
+open **System Settings › Privacy & Security** and choose **Open Anyway**.
+
+On first launch macOS asks two questions. Allow both:
+
+- **Find devices on your local network.** Drift needs this to see and reach your other Macs.
+- **Access your Downloads folder.** Received files are saved in Downloads › Drift.
+
+## Use
+
+1. Open Drift on both Macs, on the same Wi-Fi or wired network.
+2. On one Mac, click the other one under **Nearby devices**. Both show a six-digit
+   code. If they match, click **Approve** on the other Mac. Leave **This is one of
+   my devices** checked for your own Macs.
+3. Drop files or folders on the window, or click **Choose files** / **Choose folder**,
+   then **Send files**.
+
+If the other Mac never appears, for example on guest Wi-Fi that isolates
+devices, use **Pair a device**. Copy the invitation on one Mac and paste it on
+the other (Universal Clipboard works), or type its address and code.
+
+Paired Macs are listed under **Devices**, where you can choose whether a Mac's
+files arrive automatically, or forget it on both Macs.
+
+## Build from source
+
+Requirements: macOS with Xcode Command Line Tools, Node 22.12+ and stable Rust.
 
 ```sh
-cd drift
 npm ci
-npm run build
-cargo run --manifest-path engine/Cargo.toml -- --name "My laptop" --ui dist/ui
+npm run app:dev            # run the app with live UI reload
+npm run app:build          # universal Drift.app and .dmg in target/universal-apple-darwin/release/bundle
 ```
 
-If Cargo is not on PATH yet, run `. "$HOME/.cargo/env"` first. Open the private
-`http://127.0.0.1:9418/#…` URL printed in your terminal. The fragment is a local
-control secret, **not** the invitation to give another device. Reloading the tab
-requires reopening that private URL. Do not share it.
+`app:build` needs both Rust targets:
+`rustup target add aarch64-apple-darwin x86_64-apple-darwin`.
 
-Start Drift independently on both devices, on the same LAN. Allow the Drift binary
-through the local firewall if prompted. mDNS needs multicast UDP 5353; file
-transfer uses the TCP port displayed under pairing. Guest Wi-Fi client isolation
-can block both discovery and direct connections. No public port forwarding.
-This preview uses IPv4 LAN addresses; IPv6-only networks are not supported yet.
-
-1. On the receiving device, choose **Pair a device**.
-2. On the sending device, select a discovered device and enter its temporary code,
-   or paste its invitation. Address and port entry is available when mDNS fails.
-3. Approve the incoming connection on the receiver.
-4. On the sender, open **Devices** and select **Confirm connection**.
-5. Choose files or a folder, select the paired receiver, then select **Send files**.
-6. Review and approve the file list on the receiver. Files appear only after
-   SHA-256 verification, under the location displayed in Settings.
-
-Pairing is directional in this preview. To send in the opposite direction,
-generate an invitation on the other device and repeat pairing in reverse.
-
-The QR holds the same expiring invitation as the manual flow. This preview
-generates QR codes but does not access a camera; paste externally scanned QR
-contents into the invitation field. There are no permanent credentials in QR codes.
-
-## Recovery, storage and privacy
-
-* Pause stops at a chunk boundary. Retry with **Send / resume files** for the
-  currently selected batch; the receiver approves again and reports saved offsets.
-* After a restart, pair again and reselect the identical files to resume. Files
-  must have the same relative paths and bytes. History and committed offsets persist;
-  session keys and browser-selected batches do not.
-  If only the sender restarted, revoke its previous incoming connection in the
-  receiver's Devices screen before retrying through a newly paired session.
-* After switching to a different network, restart Drift so its invitation and
-  mDNS advertisement use the new interface address, then pair again. Seamless
-  network migration and physical sleep/wake testing remain unfinished.
-* Every received manifest has its own content-derived directory. Sending the same
-  files again after they arrived delivers a numbered second copy (`<id>-2`). Duplicate names
-  in different subdirectories are preserved; case collisions and file/directory
-  collisions are rejected. Overwrite is deliberately not available yet.
-* `--data /path` changes the private data directory (default `~/.drift`). Outbox
-  staging requires a local copy of selected files. Partial copies are kept until a transfer completes, then deleted; prepared outbox copies
-  are cleared each time Drift starts. Close Drift before manually deleting `publishing/` contents. Do not edit
-  `history.redb`; use a fresh data directory for a full local reset.
-* Clear history removes completed/cancelled metadata, not files. There is no
-  telemetry, cloud account, cloud storage, or persistent trusted-device list.
-* Notifications are optional browser notifications; OS/browser support varies.
-* Files are not automatically opened or executed. Treat received content as untrusted.
-
-CLI options: `--help`, `--host 192.168.1.12`, `--port 9518`, `--ui-port 9418`,
-`--phone-port 9443`, `--no-phone`,
-`--data DIRECTORY`, `--name NAME`, `--ui dist/ui`, `--no-discovery`.
-The control API binds only to loopback; never reverse-proxy it onto the LAN.
-
-## Development checks
+The same engine also runs without the app, with its interface in a browser on
+the same Mac. This is useful for development and the browser tests:
 
 ```sh
-npm run typecheck
-npm run lint
 npm run build
-cargo fmt --manifest-path engine/Cargo.toml -- --check
-cargo clippy --manifest-path engine/Cargo.toml --all-targets -- -D warnings
-cargo test --manifest-path engine/Cargo.toml -- --nocapture
-npx playwright install chromium webkit
-npm run test:ui
+cargo run -p drift-engine -- --name "Test Mac" --ui dist/ui --receive ~/Downloads/Drift
 ```
 
-Tests use actual HTTPS listeners, random certificates, two engine instances,
-filesystem writes and a transactional embedded database. Test output labels any
-loopback timing explicitly: it is not Wi-Fi throughput or an AirDrop comparison.
+Open the private `http://127.0.0.1:9418/#…` URL it prints. The part after `#`
+is a secret for this Mac only; do not share it.
 
-## Status and limits
+## Checks
 
-See [TASKS.md](TASKS.md), [ARCHITECTURE.md](ARCHITECTURE.md), and
-[PERFORMANCE.md](PERFORMANCE.md). This is not the complete requested product.
-The clickable Mac app and phone browser companion are implemented; see
-[PHONE-SETUP.md](PHONE-SETUP.md) for the explicit certificate-trust step and limits.
-Not implemented: Tauri, remote ICE/STUN/TURN/signaling, native APK/IPA clients,
-in-app camera scanning, six-digit PAKE pairing, persistent identities/OS keychain,
-custom receive-folder picker, configurable overwrite, background OS integration,
-automatic updates, signing, or verified Windows/Linux builds. No relay deployment
-is provided because no remote relay implementation exists yet. No fake remote
-or trusted-device controls are presented as working.
+```sh
+npm run typecheck && npm run lint
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace     # engine over real TLS sockets, plus the app's IPC
+npx playwright install chromium && npm run test:ui
+```
+
+CI runs all of this on macOS for every push and pull request and builds the
+universal disk image. Pushing a `v*` tag also publishes that image as a release.
+
+## How it works
+
+```
+engine/      Rust transfer engine: identity, pairing, TLS transfers, storage
+src-tauri/   the Mac app (Tauri 2): runs the engine in-process, menu bar,
+             notifications, file pickers and drag and drop
+ui/          the interface (React + TypeScript), shared by the app and the
+             browser mode
+tests/ui/    browser tests that drive two real engines end to end
+research/    the Jev usage study behind the feature priorities
+```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the protocol,
+[SECURITY.md](SECURITY.md) for the threat model and its tests, and
+[PERFORMANCE.md](PERFORMANCE.md) for measurements.
+
+## Why these features
+
+Feature priorities came from a usage study with TypeSafe's Jev model
+(`node scripts/jev-usage-study.mjs`, results in `research/`). Saving files
+where people look, keeping devices paired, and accepting your own devices'
+files without a prompt ranked highest. These are model judgments, not user
+research.
+
+## License
+
+MIT

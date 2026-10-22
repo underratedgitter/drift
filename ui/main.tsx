@@ -1,17 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import QRCode from 'qrcode';
-import { PhonePanel } from './PhonePanel.js';
 import { api, chooseNative, inApp, onAppEvents, reveal, stage, type SelectedBatch } from './transport.js';
 import './style.css';
 
 type Invitation = { version: number; host: string; port: number; code: string; expires: number };
 type Entry = { path: string; size: number; blake3: string };
 type Transfer = { id: string; entries: Entry[]; offsets: number[]; status: string; peer: string; updated: number; error: string | null; direction: string };
-type Session = { id: string; name: string; approved: boolean; confirmed: boolean };
+// code: for a tapped nearby device, the six digits both screens must show.
+type Session = { id: string; name: string; approved: boolean; confirmed: boolean; code?: string };
 // remembered: paired and kept across restarts. online: seen on this network
 // right now (null when discovery is off). own: its files arrive without asking.
-type Device = { id: string; name: string; os?: string; host?: string; port?: number; confirmed?: boolean; phone?: boolean; remembered?: boolean; own?: boolean; online?: boolean | null };
+type Device = { id: string; name: string; os?: string; host?: string; port?: number; confirmed?: boolean; remembered?: boolean; own?: boolean; online?: boolean | null; code?: string | null };
 type SelectedFile = { file?: File; path: string; size: number };
 type Snapshot = { name: string; os: string; invitation: Invitation; sessions: Session[]; connections: Device[]; transfers: Transfer[]; saved: Record<string, string[]>; peers: Device[]; discoveryError: string | null; lastError: string | null; receiveDirectory: string };
 const size = (bytes: number) => {
@@ -25,7 +24,14 @@ const total = (t: Transfer) => t.entries.reduce((sum, e) => sum + e.size, 0);
 const done = (t: Transfer) => t.offsets.reduce((sum, n) => sum + n, 0);
 const inviteUrl = (invitation: Invitation) => `drift://pair?invite=${encodeURIComponent(JSON.stringify(invitation))}`;
 const codeFormat = (code: string) => code.match(/.{1,5}/g)?.join(' ') ?? code;
-const platform = (os?: string) => ({ macos: 'Mac', windows: 'Windows', linux: 'Linux', android: 'Android', ios: 'iPhone or iPad' })[os ?? ''] ?? os ?? 'Device';
+const platform = (os?: string) => os === 'macos' ? 'Mac' : os ? os[0].toUpperCase() + os.slice(1) : 'Device';
+// macOS reports a refused Local Network permission as an unreachable host, and
+// a refused Downloads permission as "Operation not permitted". Say what to do.
+const explain = (message: string) => {
+  if (/no route to host|host is unreachable|network is unreachable/i.test(message)) return `${message} If the other Mac is on the same Wi-Fi, allow Drift in System Settings › Privacy & Security › Local Network.`;
+  if (/operation not permitted|permission denied/i.test(message) && /receive folder|save/i.test(message)) return `${message} Allow Drift to use your Downloads folder in System Settings › Privacy & Security › Files and Folders.`;
+  return message;
+};
 const presence = (device: Device) => device.online === true ? 'On this network' : device.online === false ? 'Not on this network right now' : 'Ready';
 
 async function walkDropped(entries: FileSystemEntry[]): Promise<SelectedFile[]> {
@@ -79,7 +85,6 @@ function App() {
   const [port, setPort] = useState('');
   const [code, setCode] = useState('');
   const [inviteText, setInviteText] = useState('');
-  const [qr, setQr] = useState('');
   const [selected, setSelected] = useState('');
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [batch, setBatch] = useState('');
@@ -95,7 +100,7 @@ function App() {
 
   const refresh = useCallback(async () => {
     const next = await api<Snapshot>('/state');
-    if (next.lastError) setError(next.lastError);
+    if (next.lastError) setError(explain(next.lastError));
     const timestamp = performance.now();
     const before = previous.current;
     if (before) {
@@ -136,19 +141,16 @@ function App() {
     invitation: url => { setInviteText(url); setPairOpen(true); },
   }), []);
   useEffect(() => { if (pairOpen) dialog.current?.showModal(); else dialog.current?.close(); }, [pairOpen]);
-  useEffect(() => {
-    if (snapshot?.invitation) void QRCode.toDataURL(inviteUrl(snapshot.invitation), { margin: 2, width: 220, errorCorrectionLevel: 'M', color: { dark: '#1c2844', light: '#ffffff' } }).then(setQr).catch(() => setError('Could not generate QR code. Use the pairing code instead.'));
-  }, [snapshot?.invitation.code, snapshot?.invitation.host, snapshot?.invitation.port]);
 
   const action = async (fn: () => Promise<unknown>, success?: string) => {
     setError('');
-    try { await fn(); if (success) setNotice(success); await refresh(); } catch (e) { setNotice(''); setError((e as Error).message); }
+    try { await fn(); if (success) setNotice(success); await refresh(); } catch (e) { setNotice(''); setError(explain((e as Error).message)); }
   };
   const choose = (next: File[]) => { setFiles(next.map(file => ({ file, path: file.webkitRelativePath || file.name, size: file.size }))); setBatch(''); setError(''); };
   // Chosen with the system picker or dropped on the app: read in place, no copy.
   const adoptSelection = (selection: SelectedBatch) => { setFiles(selection.files.map(file => ({ path: file.path, size: file.size }))); setBatch(selection.id); setError(''); };
   const pick = async (folder: boolean) => {
-    if (!inApp || mobileNative) { (folder ? folderPicker : filePicker).current?.click(); return; }
+    if (!inApp) { (folder ? folderPicker : filePicker).current?.click(); return; }
     await action(async () => { const selection = await chooseNative(folder); if (selection) adoptSelection(selection); });
   };
   const drop = (data: DataTransfer) => {
@@ -168,6 +170,12 @@ function App() {
     await api<{ id: string }>('/pair', invitation);
     setPairOpen(false); setNotice('Request sent. Approve it on the other device; it will appear here as ready.');
   };
+  // Tap-to-pair: both screens show six digits; the person accepts on the other device.
+  const introduce = (device: Device) => void action(async () => {
+    setNotice(`Contacting ${device.name}…`);
+    const reply = await api<{ code: string; name: string }>('/introduce', { host: device.host, port: device.port, id: device.id });
+    setNotice(`Check that ${reply.name} shows ${reply.code}, then accept there.`);
+  });
   const send = async () => {
     if (!selected || !files.length) { setError('Choose a connected device and at least one file.'); return; }
     setError('');
@@ -188,18 +196,15 @@ function App() {
         }
         setBatch(batchId);
       }
-      if (selected.startsWith('phone:')) {
-        setBusy('Checking files for your phone…');
-        await api('/phone/offer', { phone: selected.slice(6), batch: batchId });
-      } else await api('/send', { connection: selected, batch: batchId });
-      setNotice('Files queued. Approve this file list on the receiving device.');
+      await api('/send', { connection: selected, batch: batchId });
+      const own = ready.find(device => device.id === selected)?.own;
+      setNotice(own === false ? 'Sent for approval. The other device will review the file list.' : 'Sending…');
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(''); }
   };
-  const mobileNative = snapshot?.os === 'android' || snapshot?.os === 'ios';
   const localLinkMissing = snapshot?.invitation.host.startsWith('127.');
   const ready = snapshot?.connections.filter(c => c.confirmed) ?? [];
-  const waiting = snapshot?.connections.filter(c => !c.confirmed && !c.phone) ?? [];
+  const waiting = snapshot?.connections.filter(c => !c.confirmed) ?? [];
   // With one device ready, there is nothing to choose; with none, nothing chosen.
   useEffect(() => {
     if (ready.some(device => device.id === selected)) return;
@@ -216,27 +221,27 @@ function App() {
       <div className="own-device"><span className="device-avatar"><Icon name="devices"/></span><div><strong>{snapshot?.name ?? 'Connecting…'}</strong><small><span className="status-dot"/>This device · {snapshot ? platform(snapshot.os) : 'starting'}</small></div></div>
     </aside>
     <main>
-      <header className="topbar"><span><span className="status-dot"/> {snapshot ? (localLinkMissing ? 'Not connected to Wi-Fi or a hotspot' : 'Ready to send and receive') : 'Starting…'}</span></header>
+      <header className="topbar"><span><span className="status-dot"/> {snapshot ? (localLinkMissing ? 'Not connected to Wi-Fi' : 'Ready to send and receive') : 'Starting…'}</span></header>
       <div className="content">
-        <div className="page-heading"><div><h1>{page === 'send' ? 'Send & receive.' : page === 'devices' ? 'Your devices.' : page === 'history' ? 'Transfer history.' : 'Settings.'}</h1><p>{page === 'send' ? 'Choose your files. Connect a device. Send directly.' : page === 'devices' ? 'Pair once. Your devices stay paired, in both directions.' : page === 'history' ? 'Files sent and received on this device.' : 'Your preferences, stored locally.'}</p></div>{page !== 'settings' && <button className="button secondary" onClick={() => setPairOpen(true)}><Icon name="plus"/>Pair a device</button>}</div>
+        <div className="page-heading"><div><h1>{page === 'send' ? 'Send & receive.' : page === 'devices' ? 'Your devices.' : page === 'history' ? 'Transfer history.' : 'Settings.'}</h1><p>{page === 'send' ? 'Choose your files. Pick a Mac. Send directly.' : page === 'devices' ? 'Pair once. Your Macs stay paired, in both directions.' : page === 'history' ? 'Files sent and received on this device.' : 'Your preferences, stored locally.'}</p></div>{page !== 'settings' && <button className="button secondary" onClick={() => setPairOpen(true)}><Icon name="plus"/>Pair a device</button>}</div>
         {error && <div className="alert error" role="alert"><span>{error}</span><button className="icon-button" aria-label="Dismiss error" onClick={() => setError('')}><Icon name="close"/></button></div>}
         {notice && <div className="alert" role="status"><span>{notice}</span><button className="icon-button" aria-label="Dismiss notification" onClick={() => setNotice('')}><Icon name="close"/></button></div>}
-        {localLinkMissing && <p className="subtle">No local Wi-Fi or hotspot address was detected. Connect your devices to the same Wi-Fi or hotspot, then restart Drift. If discovery is blocked, use manual IP pairing; for a phone hotspot, its address is usually the laptop’s default gateway. A 127.x address works only on this device.</p>}
-        {pending.map(session => { const own = ownChoice[session.id] ?? true; return <div className="approval" key={session.id}><Icon name="shield"/><div><strong>{session.name} wants to connect</strong><p>Only approve if you started pairing on that device. Names are not proof of identity.</p><label className="check"><input type="checkbox" checked={own} onChange={e => setOwnChoice({ ...ownChoice, [session.id]: e.target.checked })}/>This is one of my devices: accept its files without asking</label></div><button className="button secondary" onClick={() => void action(() => api(`/session/${session.id}`, { approve: false }))}>Decline</button><button className="button" onClick={() => void action(() => api(`/session/${session.id}`, { approve: true, own }), `${session.name} is paired. Either device can now send to the other.`)}>Approve</button></div>; })}
+        {localLinkMissing && <p className="subtle">No Wi-Fi or Ethernet address was found. Connect both Macs to the same network, then quit and reopen Drift.</p>}
+        {pending.map(session => { const own = ownChoice[session.id] ?? true; return <div className="approval" key={session.id}><Icon name="shield"/><div><strong>{session.name} wants to connect</strong>{session.code ? <p>Accept only if {session.name} shows the same code: <code className="short-code">{session.code}</code></p> : <p>Only approve if you started pairing on that device. Names are not proof of identity.</p>}<label className="check"><input type="checkbox" checked={own} onChange={e => setOwnChoice({ ...ownChoice, [session.id]: e.target.checked })}/>This is one of my devices: accept its files without asking</label></div><button className="button secondary" onClick={() => void action(() => api(`/session/${session.id}`, { approve: false }))}>Decline</button><button className="button" onClick={() => void action(() => api(`/session/${session.id}`, { approve: true, own }), `${session.name} is paired. Either device can now send to the other.`)}>Approve</button></div>; })}
 
-        {page === 'send' && waiting.map(device => <div className="alert" key={device.id}><span>Waiting for {device.name} to approve the connection…</span></div>)}
+        {page === 'send' && waiting.map(device => <div className="alert" key={device.id}><span>{device.code ? <>Waiting for {device.name} to accept. Both screens should show <code className="short-code">{device.code}</code></> : `Waiting for ${device.name} to approve the connection…`}</span></div>)}
         {page === 'send' && <>
           <div className="send-grid"><section className={`drop-zone ${dragging ? 'dragging' : ''}`} onDragOver={e => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={e => { e.preventDefault(); setDragging(false); drop(e.dataTransfer); }} aria-label="File drop area">
             <h2>{files.length ? `${files.length} ${files.length === 1 ? 'file' : 'files'} ready to go` : 'Drop files here.'}</h2><p>{files.length ? `${size(files.reduce((sum, f) => sum + f.size, 0))} selected · directory structure preserved` : 'Or choose them below.'}</p>
-            <div className="drop-actions"><button className="button" onClick={() => void pick(false)} disabled={!!busy}><Icon name="plus"/>Choose files</button>{!mobileNative && <button className="text-button" onClick={() => void pick(true)} disabled={!!busy}><Icon name="folder"/>Choose folder</button>}</div>
+            <div className="drop-actions"><button className="button" onClick={() => void pick(false)} disabled={!!busy}><Icon name="plus"/>Choose files</button><button className="text-button" onClick={() => void pick(true)} disabled={!!busy}><Icon name="folder"/>Choose folder</button></div>
             <input ref={filePicker} type="file" multiple hidden onChange={e => choose(Array.from(e.target.files ?? []))}/><input ref={folderPicker} type="file" multiple hidden {...{ webkitdirectory: '' }} onChange={e => choose(Array.from(e.target.files ?? []))}/>
             {files.length > 0 && <div className="send-controls"><label htmlFor="recipient">Send to</label><select id="recipient" value={selected} onChange={e => setSelected(e.target.value)}><option value="">{ready.length ? 'Choose a device' : 'Pair a device first'}</option>{ready.map(d => <option key={d.id} value={d.id}>{d.name}{d.online === false ? ' (not on this network)' : ''}</option>)}</select><button className="button" disabled={!!busy || !selected} onClick={() => void send()}>{busy || (batch ? 'Send / resume files' : 'Send files')}</button></div>}
             <div className="drop-footer"><Icon name="shield"/>Encrypted in transit. Verified on arrival.</div>
           </section>
-          <section className="nearby">{ready.length > 0 && <><div className="section-heading"><h2>Your devices</h2></div><div className="device-list">{ready.map(device => <button className="device-row" key={device.id} onClick={() => setSelected(device.id)} aria-pressed={selected === device.id}><span className="device-avatar"><Icon name="devices"/></span><span><strong>{device.name}</strong><small>{device.phone ? 'Phone browser' : `${platform(device.os)} · ${presence(device)}`}</small></span>{selected === device.id && <Icon name="check" className="connect-plus"/>}</button>)}</div></>}
-            <div className="section-heading"><h2>Nearby devices</h2></div><p className="section-description">On the same network as you</p>
+          <section className="nearby">{ready.length > 0 && <><div className="section-heading"><h2>Your devices</h2></div><div className="device-list">{ready.map(device => <button className="device-row" key={device.id} onClick={() => setSelected(device.id)} aria-pressed={selected === device.id}><span className="device-avatar"><Icon name="devices"/></span><span><strong>{device.name}</strong><small>{`${platform(device.os)} · ${presence(device)}`}</small></span>{selected === device.id && <Icon name="check" className="connect-plus"/>}</button>)}</div></>}
+            <div className="section-heading"><h2>Nearby devices</h2></div><p className="section-description">Macs running Drift on your network</p>
             {snapshot?.discoveryError && <p className="inline-error">Discovery unavailable. Pair using an address and code instead.</p>}
-            {snapshot?.peers.length ? <div className="device-list">{snapshot.peers.map(device => <button className="device-row" key={device.id} onClick={() => { setHost(device.host ?? ''); setPort(String(device.port ?? '')); setPairOpen(true); }}><span className="device-avatar"><Icon name="devices"/></span><span><strong>{device.name}</strong><small>{platform(device.os)} · Tap to pair</small></span><span className="connect-plus">+</span></button>)}</div> : <div className="nearby-empty"><p>No devices found yet.</p><small>Open Drift on the same Wi-Fi, or pair with a code.</small></div>}
+            {snapshot?.peers.length ? <div className="device-list">{snapshot.peers.map(device => <button className="device-row" key={device.id} onClick={() => introduce(device)}><span className="device-avatar"><Icon name="devices"/></span><span><strong>{device.name}</strong><small>{platform(device.os)} · Tap to pair</small></span><span className="connect-plus">+</span></button>)}</div> : <div className="nearby-empty"><p>No Macs found yet.</p><small>Open Drift on your other Mac, on the same Wi-Fi. If it never appears, pair with a code.</small></div>}
             <button className="button secondary full" onClick={() => setPairOpen(true)}>Connect with a code</button>
           </section></div>
           <section className="transfers-section"><div className="section-heading"><h2>Transfers <span className="muted">{active.length || ''}</span></h2></div>{active.length ? active.map(t => <TransferRow key={t.id} transfer={t} rate={rates[t.id] ?? 0} onAction={(path, body) => void action(() => api(path, body))}/>) : <p className="empty-copy">No active transfers.</p>}</section>
@@ -244,18 +249,17 @@ function App() {
         </>}
 
         {page === 'devices' && <>
-          {!inApp && !mobileNative && <PhonePanel request={api} report={setError}/>}
           <section className="panel"><h2>Paired devices</h2><p>Paired devices stay paired after restarts and can send to each other in both directions, until you forget them here.</p>
-          {snapshot?.connections.length ? snapshot.connections.map(device => <div className="device-row" key={device.id}><span className="device-avatar"><Icon name="devices"/></span><div><strong>{device.name}</strong><small>{device.remembered ? `${platform(device.os)} · ${presence(device)}` : device.phone ? (device.confirmed ? 'Phone browser' : 'Confirm on the phone after approving here.') : 'Waiting for approval on that device…'}</small>{device.remembered && <label className="check"><input type="checkbox" checked={!!device.own} onChange={e => void action(() => api(`/devices/${device.id}`, { own: e.target.checked }), e.target.checked ? `Files from ${device.name} will arrive without asking.` : `You will be asked before files from ${device.name} arrive.`)}/>My device: accept its files without asking</label>}</div>{device.remembered && <button className="button secondary" onClick={() => void action(() => api(`/devices/${device.id}/forget`, {}), `${device.name} was forgotten on this device${device.online ? ' and on itself' : ''}.`)}>Forget</button>}</div>) : <div className="empty-line">No paired devices yet. Choose “Pair a device” to connect one.</div>}
-          {snapshot?.sessions.some(s => s.approved) && <><h3>Phone browser sessions</h3>{snapshot.sessions.filter(s => s.approved).map(s => <div className="device-row" key={s.id}><Icon name="devices"/><div><strong>{s.name}</strong><small>{s.confirmed ? 'Connected' : 'Waiting for the phone to confirm'}</small></div><button className="button secondary" onClick={() => void action(() => api(`/session/${s.id}`, { approve: false }), 'Phone disconnected.')}>Disconnect</button></div>)}</>}</section>
+          {snapshot?.connections.length ? snapshot.connections.map(device => <div className="device-row" key={device.id}><span className="device-avatar"><Icon name="devices"/></span><div><strong>{device.name}</strong><small>{device.remembered ? `${platform(device.os)} · ${presence(device)}` : device.code ? `Waiting for approval · code ${device.code}` : 'Waiting for approval on that device…'}</small>{device.remembered && <label className="check"><input type="checkbox" checked={!!device.own} onChange={e => void action(() => api(`/devices/${device.id}`, { own: e.target.checked }), e.target.checked ? `Files from ${device.name} will arrive without asking.` : `You will be asked before files from ${device.name} arrive.`)}/>My device: accept its files without asking</label>}</div>{device.remembered && <button className="button secondary" onClick={() => void action(() => api(`/devices/${device.id}/forget`, {}), `${device.name} was forgotten on this device${device.online ? ' and on itself' : ''}.`)}>Forget</button>}</div>) : <div className="empty-line">No paired devices yet. Choose “Pair a device” to connect one.</div>}
+</section>
         </>}
 
         {page === 'history' && <section className="panel"><div className="section-heading"><h2>Transfer history</h2><button className="text-button" onClick={() => void action(() => api('/history/clear', {}), 'Completed history cleared. Received files were not deleted.')}>Clear completed history</button></div>{snapshot?.transfers.length ? snapshot.transfers.map(t => <HistoryRow key={t.id} transfer={t} saved={snapshot.saved[t.id]} onError={setError}/>) : <p className="empty-copy">No transfers yet.</p>}<p className="subtle">Received files are saved in {snapshot?.receiveDirectory}</p></section>}
 
-        {page === 'settings' && <section className="panel settings"><div className="setting-row"><div><h3>Notifications</h3><p>{inApp ? 'Drift notifies you when a device wants to connect, when files are waiting for your approval and when files arrive. Change this in your system’s notification settings.' : 'Ask your browser to notify you when a transfer changes state.'}</p></div>{!inApp && <button className="button secondary" onClick={() => void action(async () => { if (!('Notification' in window)) throw new Error('This browser does not support desktop notifications.'); const permission = await Notification.requestPermission(); setNotifications(permission === 'granted'); if (permission !== 'granted') throw new Error('Notifications are blocked in browser settings.'); })}>{notifications ? 'Enabled for this session' : 'Enable notifications'}</button>}</div><div className="setting-row"><div><h3>Received files</h3><p className="path">{snapshot?.receiveDirectory}</p><p>Files and folders keep their names. If a name is taken, Drift adds a number, like “photo (2).jpg”. Nothing already there is ever replaced.</p></div></div><div className="setting-row"><div><h3>Network & privacy</h3><p>Files go directly between your devices over your Wi-Fi or hotspot, encrypted and verified on arrival. No account, no cloud, no tracking.</p>{inApp && !mobileNative && <p>Closing the window keeps Drift running in the {snapshot?.os === 'macos' ? 'menu bar' : 'system tray'}, so your devices can still send to it.</p>}</div></div><div className="setting-row"><div><h3>Storage</h3><p>{inApp && !mobileNative ? 'Files you choose or drop are read where they are, without a copy.' : 'Files you choose here are copied once into Drift before sending.'} Copies kept for resuming are deleted once a transfer completes.</p></div></div></section>}
+        {page === 'settings' && <section className="panel settings"><div className="setting-row"><div><h3>Notifications</h3><p>{inApp ? 'Drift notifies you when a device wants to connect, when files are waiting for your approval and when files arrive. Change this in System Settings › Notifications.' : 'Ask your browser to notify you when a transfer changes state.'}</p></div>{!inApp && <button className="button secondary" onClick={() => void action(async () => { if (!('Notification' in window)) throw new Error('This browser does not support desktop notifications.'); const permission = await Notification.requestPermission(); setNotifications(permission === 'granted'); if (permission !== 'granted') throw new Error('Notifications are blocked in browser settings.'); })}>{notifications ? 'Enabled for this session' : 'Enable notifications'}</button>}</div><div className="setting-row"><div><h3>Received files</h3><p className="path">{snapshot?.receiveDirectory}</p><p>Files and folders keep their names. If a name is taken, Drift adds a number, like “photo (2).jpg”. Nothing already there is ever replaced.</p></div></div><div className="setting-row"><div><h3>Network & privacy</h3><p>Files go directly between your Macs over your network, encrypted and verified on arrival. No account, no cloud, no tracking.</p>{inApp && <p>Closing the window keeps Drift running in the menu bar, so your other Macs can still send to it. Quit it from there.</p>}</div></div><div className="setting-row"><div><h3>Storage</h3><p>{inApp ? 'Files you choose or drop are read where they are, without a copy.' : 'Files you choose here are copied once into Drift before sending.'} Copies kept for resuming are deleted once a transfer completes.</p></div></div></section>}
       </div><footer className="app-footer"><span>Drift</span></footer>
     </main>
-    <dialog ref={dialog} onCancel={() => setPairOpen(false)} onClick={e => { if (e.target === dialog.current) setPairOpen(false); }} aria-labelledby="pair-title"><div className="dialog-content"><div className="section-heading"><h2 id="pair-title">A new connection.</h2><button className="icon-button" aria-label="Close pairing" onClick={() => setPairOpen(false)}><Icon name="close"/></button></div><p>Share this invitation privately with your other device. It expires in five minutes and works once.</p><div className="pair-invitation">{qr && <img src={qr} width="184" height="184" alt="Temporary Drift pairing invitation QR code"/>}<div><strong>This device</strong><p>{snapshot?.invitation.host}:{snapshot?.invitation.port}</p><code>{codeFormat(snapshot?.invitation.code ?? '')}</code><small>{snapshot ? `Expires ${new Date(snapshot.invitation.expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}</small><button className="text-button" onClick={() => void action(() => api('/invitation', {}), 'A new invitation is ready.')}>Generate new code</button><button className="text-button" onClick={() => void action(() => navigator.clipboard.writeText(inviteUrl(snapshot!.invitation)), 'Invitation copied. Share it privately.')}>Copy invitation</button></div></div><form onSubmit={e => { e.preventDefault(); void action(connect); }}><h3>Connect to another device</h3><label htmlFor="invite">Paste its invitation or QR contents</label><textarea id="invite" rows={2} value={inviteText} onChange={e => setInviteText(e.target.value)} placeholder="drift://pair?invite=…"/><span className="form-or">Or enter its address and temporary code</span><div className="address-fields"><div><label htmlFor="host">Local IP address</label><input id="host" value={host} onChange={e => setHost(e.target.value)} placeholder="192.168.1.24"/></div><div><label htmlFor="port">Port</label><input id="port" inputMode="numeric" value={port} onChange={e => setPort(e.target.value)} placeholder="49152"/></div></div><label htmlFor="code">Pairing code</label><input id="code" value={code} onChange={e => setCode(e.target.value)} autoComplete="off" spellCheck={false} placeholder="The 30-character code on the other device"/><p className="subtle">No camera scanner in this preview. Paste scanned QR contents here. Never share this code publicly.</p><button className="button full" type="submit">Request connection</button></form></div></dialog>
+    <dialog ref={dialog} onCancel={() => setPairOpen(false)} onClick={e => { if (e.target === dialog.current) setPairOpen(false); }} aria-labelledby="pair-title"><div className="dialog-content"><div className="section-heading"><h2 id="pair-title">Pair with a code.</h2><button className="icon-button" aria-label="Close pairing" onClick={() => setPairOpen(false)}><Icon name="close"/></button></div><p>For when the other Mac does not appear under Nearby devices. This code expires in five minutes and works once.</p><div className="pair-invitation"><div><strong>This Mac</strong><p>{snapshot?.invitation.host}:{snapshot?.invitation.port}</p><code>{codeFormat(snapshot?.invitation.code ?? '')}</code><small>{snapshot ? `Expires ${new Date(snapshot.invitation.expires * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}</small><button className="text-button" onClick={() => void action(() => api('/invitation', {}), 'A new code is ready.')}>Generate new code</button><button className="text-button" onClick={() => void action(() => navigator.clipboard.writeText(inviteUrl(snapshot!.invitation)), 'Invitation copied. With Universal Clipboard, paste it on your other Mac.')}>Copy invitation</button></div></div><form onSubmit={e => { e.preventDefault(); void action(connect); }}><h3>Connect to the other Mac</h3><label htmlFor="invite">Paste its invitation</label><textarea id="invite" rows={2} value={inviteText} onChange={e => setInviteText(e.target.value)} placeholder="drift://pair?invite=…"/><span className="form-or">Or enter its address and code</span><div className="address-fields"><div><label htmlFor="host">Local IP address</label><input id="host" value={host} onChange={e => setHost(e.target.value)} placeholder="192.168.1.24"/></div><div><label htmlFor="port">Port</label><input id="port" inputMode="numeric" value={port} onChange={e => setPort(e.target.value)} placeholder="49152"/></div></div><label htmlFor="code">Pairing code</label><input id="code" value={code} onChange={e => setCode(e.target.value)} autoComplete="off" spellCheck={false} placeholder="The 30-character code on the other Mac"/><p className="subtle">Never share this code publicly.</p><button className="button full" type="submit">Request connection</button></form></div></dialog>
   </div>;
 }
 

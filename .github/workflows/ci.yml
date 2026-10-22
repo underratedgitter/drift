@@ -2,6 +2,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -11,51 +12,61 @@ concurrency:
   cancel-in-progress: true
 jobs:
   checks:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    runs-on: macos-15
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with: {node-version: '24', cache: npm}
       - run: rustup update stable && rustup component add rustfmt clippy
-      - name: Linux webview libraries
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
       - run: npm ci
-      - run: npx tsc --noEmit && npm run lint
+      - run: npm run typecheck && npm run lint
       - run: npm run build
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+      - run: npm run test:tools
+      - run: npx playwright install chromium
+      - name: Two engines pair and transfer through the interface
+        run: npm run test:ui
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: ui-test-results
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
   app:
-    name: App (${{ matrix.name }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - {name: macOS arm64, runner: macos-15}
-          - {name: macOS x64, runner: macos-15-intel}
-          - {name: Windows x64, runner: windows-2025}
-          - {name: Linux x64, runner: ubuntu-24.04}
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-15
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with: {node-version: '24', cache: npm}
-      - run: rustup update stable
-      - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: rustup update stable && rustup target add aarch64-apple-darwin x86_64-apple-darwin
       - run: npm ci
-      - name: Build unsigned installers (development only, never published)
-        run: npx tauri build --debug
-      - uses: actions/upload-artifact@v5
+      - name: Build the universal app and disk image (ad-hoc signed)
+        run: npm run app:build -- --bundles app,dmg
+      - name: Check both architectures are in the app
+        run: lipo -archs target/universal-apple-darwin/release/bundle/macos/Drift.app/Contents/MacOS/drift-app | grep -q 'x86_64 arm64'
+      - uses: actions/upload-artifact@v7
         with:
-          name: drift-${{ matrix.runner }}
-          path: |
-            target/debug/bundle/**/*.dmg
-            target/debug/bundle/**/*.exe
-            target/debug/bundle/**/*.msi
-            target/debug/bundle/**/*.deb
-            target/debug/bundle/**/*.AppImage
+          name: Drift-macOS
+          path: target/universal-apple-darwin/release/bundle/dmg/*.dmg
           retention-days: 7
-          if-no-files-found: warn
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [checks, app]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with: {name: Drift-macOS, path: dist}
+      - name: Publish the disk image to a GitHub Release
+        run: gh release create "$GITHUB_REF_NAME" dist/*.dmg --repo "$GITHUB_REPOSITORY" --title "Drift $GITHUB_REF_NAME" --notes "Universal Mac app (Apple Silicon and Intel), macOS 11 or later. Ad-hoc signed, not notarized; see the README for how to open it the first time."
+        env:
+          GH_TOKEN: ${{ github.token }}

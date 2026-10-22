@@ -11,6 +11,34 @@ pub fn secret(bytes: usize) -> String {
     hex::encode(value)
 }
 
+/// The hash a device commits to before it sees the other device's nonce.
+pub fn commitment(nonce: &str) -> String {
+    use sha2::Digest;
+    hex::encode(Sha256::digest(
+        format!("drift-commitment-v1:{nonce}").as_bytes(),
+    ))
+}
+
+/// The six digits both screens show when a nearby device is tapped. Both
+/// certificate fingerprints and both nonces go in; the initiator committed to
+/// its nonce first, so a device in the middle cannot steer the two codes to
+/// match (one chance in a million per attempt).
+pub fn short_code(server: &str, client: &str, server_nonce: &str, client_nonce: &str) -> String {
+    use sha2::Digest;
+    let digest = Sha256::digest(
+        serde_json::to_vec(&(
+            "drift-short-code-v1",
+            server,
+            client,
+            server_nonce,
+            client_nonce,
+        ))
+        .unwrap(),
+    );
+    let value = u64::from_be_bytes(digest[..8].try_into().unwrap()) % 1_000_000;
+    format!("{:03} {:03}", value / 1000, value % 1000)
+}
+
 pub fn proof(code: &str, role: &str, fingerprint: &str, nonce: &str, name: &str) -> String {
     let mut mac = Hmac::<Sha256>::new_from_slice(code.as_bytes()).unwrap();
     mac.update(&serde_json::to_vec(&(1, role, fingerprint, nonce, name)).unwrap());
@@ -107,5 +135,29 @@ impl Pairing {
         )?;
         self.used = true;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_codes_depend_on_every_input() {
+        let code = short_code("a", "b", "n1", "n2");
+        assert_eq!(code.len(), 7);
+        assert!(code.chars().all(|c| c.is_ascii_digit() || c == ' '));
+        assert_eq!(code, short_code("a", "b", "n1", "n2"));
+        for other in [
+            short_code("x", "b", "n1", "n2"),
+            short_code("a", "x", "n1", "n2"),
+            short_code("a", "b", "x", "n2"),
+            short_code("a", "b", "n1", "x"),
+            short_code("b", "a", "n1", "n2"),
+        ] {
+            assert_ne!(other, code);
+        }
+        assert_ne!(commitment("n1"), commitment("n2"));
+        assert_eq!(commitment("n1").len(), 64);
     }
 }

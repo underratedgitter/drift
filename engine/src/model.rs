@@ -76,6 +76,30 @@ pub struct Session {
     /// The pairing device's identity and address, kept until approval.
     #[serde(skip, default)]
     pub device: Option<(DeviceHello, String)>,
+    /// For a tapped nearby device: the six digits both screens must show.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
+}
+
+/// First step of tap-to-pair: who is asking, and a commitment to its nonce.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Introduction {
+    pub name: String,
+    pub device: DeviceHello,
+    pub commitment: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct IntroductionReply {
+    pub id: String,
+    pub nonce: String,
+    pub name: String,
+    pub os: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Reveal {
+    pub nonce: String,
 }
 
 /// A paired device remembered across restarts. Each side issued one capability

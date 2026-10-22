@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Merged into the bundle's Info.plist by Tauri. -->
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Drift finds your other Macs on this network and sends files to them directly.</string>
+  <key>NSBonjourServices</key>
+  <array>
+    <string>_drift._tcp</string>
+  </array>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>Drift saves the files your other Macs send you in Downloads › Drift.</string>
+  <!-- Keep transfers at full speed while the window is hidden in the menu bar. -->
+  <key>NSAppSleepDisabled</key>
+  <true/>
+</dict>
+</plist>

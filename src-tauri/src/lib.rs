@@ -1,6 +1,6 @@
-//! Drift's app for macOS, Windows, Linux, Android and iOS. The transfer engine
-//! runs inside this process and the interface reaches its control API through
-//! Tauri IPC: no local HTTP port, no secret in a URL, the same on every OS.
+//! Drift for macOS. The transfer engine runs inside this process and the
+//! interface reaches its control API through Tauri IPC: no local HTTP port and
+//! no secret in a URL.
 //!
 //! File paths only ever come from the operating system (pickers, drag and
 //! drop) on the Rust side. The web view cannot name files on disk, so even a
@@ -156,7 +156,7 @@ async fn select_paths(engine: &Engine, paths: Vec<PathBuf>) -> CommandResult<sel
         .map_err(text)
 }
 
-/// Shows a received transfer's saved files in Finder / Explorer / Files.
+/// Shows a received transfer's saved files in Finder.
 #[tauri::command]
 async fn reveal(app: AppHandle, engine: State<'_, Engine>, transfer: String) -> CommandResult<()> {
     let saved = engine.running.engine.store.saved(&transfer).map_err(text)?;
@@ -166,16 +166,8 @@ async fn reveal(app: AppHandle, engine: State<'_, Engine>, transfer: String) -> 
     if !std::path::Path::new(first).exists() {
         return Err("The saved files were moved or deleted".into());
     }
-    #[cfg(desktop)]
-    {
-        use tauri_plugin_opener::OpenerExt;
-        app.opener().reveal_item_in_dir(first).map_err(text)
-    }
-    #[cfg(mobile)]
-    {
-        use tauri_plugin_opener::OpenerExt;
-        app.opener().open_path(first, None::<&str>).map_err(text)
-    }
+    use tauri_plugin_opener::OpenerExt;
+    app.opener().reveal_item_in_dir(first).map_err(text)
 }
 
 #[tauri::command]
@@ -200,29 +192,16 @@ fn show(app: &AppHandle) {
     }
 }
 
-/// Where verified received files go: somewhere people look for them.
-fn inbox(app: &AppHandle) -> tauri::Result<Option<PathBuf>> {
-    #[cfg(target_os = "ios")]
-    {
-        // The app's Documents folder: "On My iPhone › Drift" in the Files app.
-        return Ok(Some(app.path().document_dir()?));
-    }
-    #[cfg(target_os = "android")]
-    {
-        // Saved to Downloads/Drift through the system's media store; see the
-        // Android plugin. Until then files stay in the app.
-        let _ = app;
-        return Ok(None);
-    }
-    #[cfg(desktop)]
-    {
-        Ok(Some(app.path().download_dir()?.join("Drift")))
-    }
-}
-
 fn start_engine(app: &AppHandle) -> anyhow::Result<Engine> {
     let root = app.path().app_data_dir()?.join("engine");
-    let inbox = inbox(app)?;
+    // Verified received files go where people look for them: Downloads › Drift.
+    let inbox = app.path().download_dir()?.join("Drift");
+    // Downloads is privacy-protected; creating the folder now makes macOS ask
+    // for access while the person is looking at Drift, not mid-transfer.
+    if let Err(error) = std::fs::create_dir_all(&inbox) {
+        eprintln!("Could not create {}: {error}", inbox.display());
+    }
+    let inbox = Some(inbox);
     let running = tauri::async_runtime::block_on(drift_engine::launch(Options {
         root,
         name: device::name(),
@@ -235,7 +214,6 @@ fn start_engine(app: &AppHandle) -> anyhow::Result<Engine> {
     Ok(Engine { running, router })
 }
 
-#[cfg(desktop)]
 fn tray(app: &tauri::App) -> tauri::Result<()> {
     use tauri::{
         menu::{Menu, MenuItem},
@@ -244,7 +222,11 @@ fn tray(app: &tauri::App) -> tauri::Result<()> {
     let open = MenuItem::with_id(app, "open", "Open Drift", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Drift", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open, &quit])?;
-    let mut builder = TrayIconBuilder::with_id("drift")
+    // A template image: macOS tints it for the light or dark menu bar.
+    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray.png"))?;
+    TrayIconBuilder::with_id("drift")
+        .icon(icon)
+        .icon_as_template(true)
         .tooltip("Drift is ready to receive")
         .menu(&menu)
         .show_menu_on_left_click(false)
@@ -262,18 +244,14 @@ fn tray(app: &tauri::App) -> tauri::Result<()> {
             {
                 show(tray.app_handle());
             }
-        });
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
-    }
-    builder.build(app)?;
+        })
+        .build(app)?;
     Ok(())
 }
 
 fn window_event(window: &tauri::Window, event: &WindowEvent) {
     match event {
-        // Closing the window keeps Drift receiving from the tray / menu bar.
-        #[cfg(desktop)]
+        // Closing the window keeps Drift receiving from the menu bar.
         WindowEvent::CloseRequested { api, .. } => {
             api.prevent_close();
             let _ = window.hide();
@@ -307,18 +285,13 @@ fn window_event(window: &tauri::Window, event: &WindowEvent) {
     }
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let mut builder = tauri::Builder::default();
-    #[cfg(desktop)]
-    {
-        // Must be first: a second launch (or a drift:// link on Windows and
-        // Linux) reaches the running app instead of starting a second engine.
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+    let app = tauri::Builder::default()
+        // Must be first: a second launch reaches the running app instead of
+        // starting a second engine on the same data.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             show(app)
-        }));
-    }
-    let app = builder
+        }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
@@ -341,13 +314,7 @@ pub fn run() {
             };
             watch::spawn(app.handle().clone(), engine.running.engine.clone());
             app.manage(engine);
-            #[cfg(desktop)]
             tray(app)?;
-            #[cfg(any(windows, target_os = "linux"))]
-            {
-                // Installers register drift:// themselves; this covers portable runs.
-                let _ = app.deep_link().register_all();
-            }
             let handle = app.handle().clone();
             app.deep_link().on_open_url(move |event| {
                 for url in event.urls() {
@@ -372,7 +339,7 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("Drift's app shell failed to build");
     app.run(|app, event| match event {
-        #[cfg(target_os = "macos")]
+        // Clicking the Dock icon brings the hidden window back.
         RunEvent::Reopen { .. } => show(app),
         RunEvent::Exit => {
             if let Some(engine) = app.try_state::<Engine>() {
@@ -381,4 +348,82 @@ pub fn run() {
         }
         _ => {}
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use tauri::{
+        ipc::{CallbackFn, InvokeBody},
+        test::{INVOKE_KEY, get_ipc_response, mock_builder, mock_context, noop_assets},
+        webview::InvokeRequest,
+    };
+
+    fn invoke(command: &str, body: InvokeBody) -> InvokeRequest {
+        InvokeRequest {
+            cmd: command.into(),
+            callback: CallbackFn(0),
+            error: CallbackFn(1),
+            url: "tauri://localhost".parse().unwrap(),
+            body,
+            headers: Default::default(),
+            invoke_key: INVOKE_KEY.to_string(),
+        }
+    }
+
+    #[test]
+    fn the_interface_reaches_the_engine_only_through_safe_ipc_requests() {
+        let root = tempfile::tempdir().unwrap();
+        let running = tauri::async_runtime::block_on(drift_engine::launch(Options {
+            root: root.path().to_owned(),
+            name: "IPC test".into(),
+            host: "127.0.0.1".into(),
+            bind: SocketAddr::from(([127, 0, 0, 1], 0)),
+            discover: false,
+            inbox: None,
+        }))
+        .unwrap();
+        let router = drift_engine::web::app_router(running.engine.clone());
+        let app = mock_builder()
+            .manage(Engine { running, router })
+            .invoke_handler(tauri::generate_handler![api, api_bytes])
+            .build(mock_context(noop_assets()))
+            .unwrap();
+        let window = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+            .build()
+            .unwrap();
+        let call = |method: &str, path: &str| {
+            get_ipc_response(
+                &window,
+                invoke(
+                    "api",
+                    InvokeBody::Json(json!({"method": method, "path": path, "body": null})),
+                ),
+            )
+        };
+
+        let state: Value = call("GET", "/state").unwrap().deserialize().unwrap();
+        assert_eq!(state["status"], 200);
+        assert_eq!(state["body"]["name"], "IPC test");
+        // The engine's own errors come back as a status and message for the UI.
+        let missing: Value = get_ipc_response(
+            &window,
+            invoke(
+                "api",
+                InvokeBody::Json(json!({"method": "POST", "path": "/session/unknown", "body": {"approve": true}})),
+            ),
+        )
+        .unwrap()
+        .deserialize()
+        .unwrap();
+        assert_eq!(missing["status"], 400);
+        assert_eq!(missing["body"]["error"], "Session not found");
+        for (method, path) in [("DELETE", "/state"), ("GET", "/../state"), ("GET", "state")] {
+            assert!(call(method, path).is_err(), "{method} {path} was accepted");
+        }
+        // Raw uploads must be bytes, and only for the outbox.
+        let not_bytes = get_ipc_response(&window, invoke("api_bytes", InvokeBody::Json(json!({}))));
+        assert!(not_bytes.is_err());
+    }
 }

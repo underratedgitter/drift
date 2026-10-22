@@ -100,7 +100,6 @@ dialog::backdrop { background: #000c; }
 .dialog-content > p { font-size: 13px; color: var(--muted); }
 .dialog-content h2 { font-family: var(--display); font-size: 34px; font-weight: 400; }
 .pair-invitation { display: flex; align-items: center; gap: 24px; padding: 20px 0 28px; margin-bottom: 24px; border-bottom: 1px solid var(--line); }
-.pair-invitation img { width: 160px; height: 160px; }
 .pair-invitation > div { min-width: 0; }
 .pair-invitation strong { font-size: 13px; font-weight: 500; }
 .pair-invitation p { margin: 8px 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
@@ -168,7 +167,6 @@ form .full { margin-top: 16px; }
   .device-row { flex-wrap: wrap; }
   .dialog-content { padding: 20px; }
   .pair-invitation { gap: 16px; align-items: flex-start; }
-  .pair-invitation img { width: 112px; height: 112px; }
   .pair-invitation code { font-size: 12px; }
   .phone-invite { flex-direction: column; align-items: flex-start; }
   .app-footer { padding: 20px 24px; }
@@ -176,3 +174,4 @@ form .full { margin-top: 16px; }
 .check { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.5; cursor: pointer; }
 .check input { width: 16px; height: 16px; min-width: 16px; padding: 0; margin: 0; accent-color: var(--text); }
 .device-row[aria-pressed="true"] strong { text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 1px; }
+.short-code { margin-left: 6px; font-size: 15px; letter-spacing: .12em; color: var(--text); white-space: nowrap; }

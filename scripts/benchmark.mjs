@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 import console from 'node:console';
 
-const directory = resolve('engine/target/release/deps');
+const directory = resolve('target/release/deps');
 const candidates = readdirSync(directory).filter(name => /^integration-[a-f0-9]+(?:\.exe)?$/.test(name))
   .map(name => resolve(directory, name)).filter(path => statSync(path).isFile())
   .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);

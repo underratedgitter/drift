@@ -1,5 +1,0 @@
-{
-  "name": "drift-desktop", "productName": "Drift", "version": "0.2.0",
-  "description": "Account-free file transfer between your devices",
-  "author": "Drift contributors", "license": "MIT", "main": "main.cjs"
-}

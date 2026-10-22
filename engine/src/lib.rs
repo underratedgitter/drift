@@ -3,7 +3,6 @@ pub mod identity;
 pub mod model;
 pub mod network;
 pub mod pairing;
-pub mod phone;
 mod pipeline;
 pub mod selection;
 pub mod storage;
@@ -21,9 +20,10 @@ use axum::{
     routing::{get, post, put},
 };
 use model::{
-    Entry, PairRequest, Session, Transfer, TrustedDevice, capability_hash, manifest_id, now,
+    Entry, Introduction, IntroductionReply, PairRequest, Reveal, Session, Transfer, TrustedDevice,
+    capability_hash, manifest_id, now,
 };
-use pairing::{Pairing, secret};
+use pairing::{Pairing, commitment, secret, short_code};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
@@ -63,6 +63,8 @@ pub struct Engine {
     /// Devices this one started pairing with, by the hash of the capability
     /// they will present, until the other side approves or declines.
     pub outgoing_pairs: std::sync::Mutex<HashMap<String, (String, String)>>,
+    /// Tap-to-pair requests waiting for the initiator to reveal its nonce.
+    introductions: std::sync::Mutex<Introductions>,
     pub pairing: Mutex<Pairing>,
     pub sessions: Mutex<HashMap<String, Session>>,
     pub connections: Mutex<HashMap<String, Connection>>,
@@ -76,15 +78,20 @@ pub struct Engine {
     pub discovery_error: std::sync::Mutex<Option<String>>,
     pub last_error: Mutex<Option<String>>,
     pub send_controls: std::sync::Mutex<HashMap<String, String>>,
-    pub phone: Mutex<Option<Arc<phone::Hub>>>,
     pub native_sources: Mutex<HashMap<String, Vec<PathBuf>>>,
-    pub native_token: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Upload {
     pub path: String,
     pub size: u64,
+}
+
+#[derive(Default)]
+struct Introductions {
+    pending: HashMap<String, (Introduction, String, String, u64)>,
+    window: u64,
+    attempts: u32,
 }
 
 pub struct Running {
@@ -205,6 +212,7 @@ pub async fn launch(options: Options) -> Result<Running> {
         port: address.port(),
         devices: std::sync::Mutex::new(devices),
         outgoing_pairs: std::sync::Mutex::new(HashMap::new()),
+        introductions: std::sync::Mutex::new(Introductions::default()),
         pairing: Mutex::new(Pairing::new(host.clone(), address.port())),
         sessions: Mutex::new(HashMap::new()),
         connections: Mutex::new(connections),
@@ -218,11 +226,7 @@ pub async fn launch(options: Options) -> Result<Running> {
         discovery_error: std::sync::Mutex::new(None),
         last_error: Mutex::new(None),
         send_controls: std::sync::Mutex::new(HashMap::new()),
-        phone: Mutex::new(None),
         native_sources: Mutex::new(HashMap::new()),
-        native_token: std::env::var("DRIFT_NATIVE_TOKEN")
-            .ok()
-            .filter(|value| value.len() == 64),
     });
     if discover {
         match discovery::Discovery::start(&engine.fingerprint, &engine.name, &host, address.port())
@@ -234,6 +238,8 @@ pub async fn launch(options: Options) -> Result<Running> {
     let router = Router::new()
         .route("/proof", get(challenge))
         .route("/pair", post(pair))
+        .route("/introduce", post(introduce))
+        .route("/introduce/{id}/reveal", post(reveal))
         .route("/session", get(session_status))
         .route("/confirm", post(confirm))
         .route("/offer", post(offer))
@@ -370,6 +376,112 @@ async fn pair(
         device: request
             .device
             .map(|device| (device, remote.ip().to_string())),
+        code: None,
+    };
+    let id = session.id.clone();
+    sessions.insert(id.clone(), session);
+    Ok(Json(PairReply {
+        session: id,
+        capability,
+        name: engine.name.clone(),
+        os: std::env::consts::OS.into(),
+    }))
+}
+
+// Tap-to-pair, step one: remember who asks and its commitment, and answer
+// with this device's nonce. Nothing is trusted until a person accepts.
+async fn introduce(
+    State(engine): State<Shared>,
+    ConnectInfo(remote): ConnectInfo<SocketAddr>,
+    Json(request): Json<Introduction>,
+) -> ApiResult<Json<IntroductionReply>> {
+    request.device.validate()?;
+    check(
+        request.device.id != engine.fingerprint,
+        "A device cannot pair with itself",
+    )?;
+    check(
+        !request.name.trim().is_empty() && request.name.len() <= 100,
+        "Invalid device name",
+    )?;
+    check(
+        request.commitment.len() == 64 && hex::decode(&request.commitment).is_ok(),
+        "Invalid commitment",
+    )?;
+    let nonce = secret(32);
+    let id = uuid::Uuid::new_v4().to_string();
+    {
+        let mut introductions = engine.introductions.lock().unwrap();
+        let time = now();
+        if time.saturating_sub(introductions.window) >= 60 {
+            introductions.window = time;
+            introductions.attempts = 0;
+        }
+        introductions.attempts += 1;
+        check(
+            introductions.attempts <= 20,
+            "Too many pairing requests. Wait a minute.",
+        )?;
+        introductions
+            .pending
+            .retain(|_, (_, _, _, created)| time.saturating_sub(*created) < 120);
+        check(
+            introductions.pending.len() < 8,
+            "Too many pairing requests are waiting. Try again shortly.",
+        )?;
+        introductions.pending.insert(
+            id.clone(),
+            (request, remote.ip().to_string(), nonce.clone(), time),
+        );
+    }
+    Ok(Json(IntroductionReply {
+        id,
+        nonce,
+        name: engine.name.clone(),
+        os: std::env::consts::OS.into(),
+    }))
+}
+
+// Step two: the initiator reveals its nonce; both sides can now show the same
+// six digits. The request waits for a person to compare them and accept.
+async fn reveal(
+    State(engine): State<Shared>,
+    Path(id): Path<String>,
+    Json(request): Json<Reveal>,
+) -> ApiResult<Json<PairReply>> {
+    let (introduction, host, nonce, _) =
+        engine
+            .introductions
+            .lock()
+            .unwrap()
+            .pending
+            .remove(&id)
+            .context("This pairing request expired. Tap the device again.")?;
+    check(
+        constant_eq(&commitment(&request.nonce), &introduction.commitment),
+        "Pairing check failed. Tap the device again.",
+    )?;
+    let mut sessions = engine.sessions.lock().await;
+    check(
+        sessions.len() < 64,
+        "Too many sessions; restart the app to clear sessions",
+    )?;
+    let capability = secret(32);
+    let code = short_code(
+        &engine.fingerprint,
+        &introduction.device.id,
+        &nonce,
+        &request.nonce,
+    );
+    let session = Session {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: introduction.name,
+        approved: false,
+        confirmed: false,
+        created: now(),
+        capability: capability.clone(),
+        device: Some((introduction.device, host)),
+        code: Some(code),
     };
     let id = session.id.clone();
     sessions.insert(id.clone(), session);
@@ -446,6 +558,7 @@ impl Engine {
                 created: now(),
                 capability: String::new(),
                 device: None,
+                code: None,
             });
         }
         // We asked this device to pair; it may send to us as soon as it approves.
@@ -464,6 +577,7 @@ impl Engine {
                 created: now(),
                 capability: String::new(),
                 device: None,
+                code: None,
             });
         }
         let sessions = self.sessions.lock().await;

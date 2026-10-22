@@ -4,31 +4,16 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
 import { createFixture, verifyFixture } from '../scripts/transfer-fixture.mjs';
-import { packagedDesktopExecutable } from './ui/packaged-path.ts';
 
-test('packaged executable resolution follows native platform and architecture', () => {
-  assert.equal(packagedDesktopExecutable('darwin', 'x64', ''), path.resolve('release/mac/Drift.app/Contents/MacOS/Drift'));
-  assert.equal(packagedDesktopExecutable('darwin', 'arm64', ''), path.resolve('release/mac-arm64/Drift.app/Contents/MacOS/Drift'));
-  assert.equal(packagedDesktopExecutable('win32', 'x64', ''), path.resolve('release/win-unpacked/Drift.exe'));
-  assert.equal(packagedDesktopExecutable('linux', 'x64', ''), null);
-  assert.equal(packagedDesktopExecutable('win32', 'arm64', ''), null);
-  assert.equal(packagedDesktopExecutable('darwin', 'x64', path.resolve('installed/Drift')), path.resolve('installed/Drift'));
-  assert.throws(() => packagedDesktopExecutable('darwin', 'x64', 'relative/Drift'), /absolute path/);
-});
-
-test('native CI remains manual, read-only and explicit about runner architectures', () => {
-  const workflow = readFileSync('.github/workflows/native-builds.yml', 'utf8');
-  assert.match(workflow, /workflow_dispatch:/);
-  assert.doesNotMatch(workflow, /^ {2}(push|pull_request|schedule):/m);
-  assert.match(workflow, /contents: read/);
-  assert.doesNotMatch(workflow, /contents: write|secrets\./);
-  assert.match(workflow, /runner: macos-15-intel, arch: x64/);
-  assert.match(workflow, /runner: macos-15, arch: arm64/);
-  assert.match(workflow, /runs-on: windows-2025/);
-  assert.match(workflow, /DRIFT_TEST_PACKAGED_TRANSFERS: '1'/);
-  assert.match(workflow, /DRIFT_TEST_WEBKIT: '1'/);
-  assert.match(workflow, /installerInstalled:false/);
-  assert.match(workflow, /physicalNetworkTested:false/);
+test('CI builds only for macOS and publishes only from version tags', () => {
+  const workflow = readFileSync('.github/workflows/ci.yml', 'utf8');
+  assert.match(workflow, /^permissions:\n {2}contents: read/m);
+  for (const runner of workflow.matchAll(/runs-on: (\S+)/g)) assert.match(runner[1], /^(macos-15|ubuntu-24\.04)$/);
+  assert.match(workflow, /universal-apple-darwin|app:build/);
+  const release = workflow.slice(workflow.indexOf('  release:'));
+  assert.match(release, /if: startsWith\(github\.ref, 'refs\/tags\/v'\)/);
+  assert.match(release, /contents: write/);
+  assert.equal(workflow.split('contents: write').length - 1, 1, 'only the release job may write');
 });
 
 test('manual fixture verifies zero-byte, Unicode, multi-window and small files and catches damage', () => {

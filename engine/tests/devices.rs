@@ -344,3 +344,105 @@ async fn folders_and_many_files_are_delivered_with_readable_names() {
     let partial = a.path().join("partial").join(&done[0].id);
     eventually("recovery copies to be removed", async || !partial.exists()).await;
 }
+
+#[tokio::test]
+async fn tapping_a_nearby_device_pairs_after_both_screens_show_the_same_code() {
+    let (a, b, files) = (
+        tempfile::tempdir().unwrap(),
+        tempfile::tempdir().unwrap(),
+        tempfile::tempdir().unwrap(),
+    );
+    let studio = launch(a.path(), "Studio Mac", None).await;
+    let laptop = launch(b.path(), "MacBook Air", None).await;
+    let nearby = json!({"host": "127.0.0.1", "port": studio.address.port(), "id": studio.engine.fingerprint});
+
+    // An advertised identity that does not match the device that answers.
+    let wrong = json!({"host": "127.0.0.1", "port": studio.address.port(), "id": "a".repeat(64)});
+    let refused = call(&laptop.engine, "/introduce", Some(wrong))
+        .await
+        .unwrap_err();
+    assert!(refused.contains("different identity"), "{refused}");
+
+    let started = call(&laptop.engine, "/introduce", Some(nearby))
+        .await
+        .unwrap();
+    let code = started["code"].as_str().unwrap().to_owned();
+    assert_eq!(code.len(), 7);
+    assert_eq!(started["name"], "Studio Mac");
+    let waiting = state(&laptop.engine).await;
+    assert_eq!(waiting["connections"][0]["code"], code.as_str());
+    assert_eq!(waiting["connections"][0]["confirmed"], false);
+    let asking = state(&studio.engine).await;
+    let sessions = asking["sessions"].as_array().unwrap();
+    assert_eq!(
+        sessions.len(),
+        1,
+        "the refused attempt must not leave a request behind"
+    );
+    assert_eq!(sessions[0]["name"], "MacBook Air");
+    assert_eq!(sessions[0]["code"], code.as_str());
+
+    let pending = sessions[0]["id"].as_str().unwrap();
+    call(
+        &studio.engine,
+        &format!("/session/{pending}"),
+        Some(json!({"approve": true, "own": true})),
+    )
+    .await
+    .unwrap();
+    eventually("the laptop to remember the studio", async || {
+        state(&laptop.engine).await["connections"][0]["remembered"] == true
+    })
+    .await;
+    let file = files.path().join("cut.mov");
+    std::fs::write(&file, b"final cut").unwrap();
+    send(&laptop.engine, &studio.engine.fingerprint, &[file]).await;
+    completed(&studio.engine, "receive", 1).await;
+}
+
+#[tokio::test]
+async fn a_reveal_that_does_not_match_its_commitment_is_rejected_once_and_for_all() {
+    let root = tempfile::tempdir().unwrap();
+    let studio = launch(root.path(), "Studio Mac", None).await;
+    let base = format!("https://127.0.0.1:{}", studio.address.port());
+    // Test-only client: the server certificate is irrelevant to this check.
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .no_proxy()
+        .build()
+        .unwrap();
+    let hello =
+        json!({"id": "b".repeat(64), "port": 1, "capability": "c".repeat(64), "os": "macos"});
+    let commitment = drift_engine::pairing::commitment("the real nonce");
+    let introduced: Value = client
+        .post(format!("{base}/introduce"))
+        .json(&json!({"name": "Impostor", "device": hello, "commitment": commitment}))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let id = introduced["id"].as_str().unwrap();
+    let forged = client
+        .post(format!("{base}/introduce/{id}/reveal"))
+        .json(&json!({"nonce": "a chosen nonce"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(forged.status(), 400);
+    // The request is spent: even the right nonce cannot be tried afterwards.
+    let replay = client
+        .post(format!("{base}/introduce/{id}/reveal"))
+        .json(&json!({"nonce": "the real nonce"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(replay.status(), 400);
+    assert!(
+        state(&studio.engine).await["sessions"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+}

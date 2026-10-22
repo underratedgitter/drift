@@ -2,7 +2,6 @@ node_modules/
 dist/
 .drift/
 *.log
-engine/target/
 test-results/
 playwright-report/
 release/
@@ -11,22 +10,8 @@ release/
 !.env.example
 *.p12
 *.p8
-*.mobileprovision
-*.jks
-*.keystore
-*.xcuserstate
-xcuserdata/
 .toolchains/
-native/core/target/
-native/**/build/
-native/**/.gradle/
-native/ios/Generated/
-native/android/app/src/main/jniLibs/
-native/**/.kotlin/
-native/android/local.properties
 .DS_Store
-phone-tls.json
-phone-tls-*.tmp
 history.redb*
 /received/
 /outbox/
@@ -34,3 +19,4 @@ history.redb*
 /publishing/
 /target/
 src-tauri/gen/schemas/
+engine/target/
