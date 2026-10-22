@@ -1,0 +1,3058 @@
+[
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.19
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.23
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.83
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.87
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.33
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.76
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.57
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.83
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.7
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.73
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.85
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.82
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.85
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.49
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.54
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.76
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.84
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.83
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.87
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "priya",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.85
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "priya",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.22
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.14
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.59
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.58
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.54,
+        "probabilities": {
+          "tap_and_compare": 0.23,
+          "scan_qr": 0.63,
+          "type_short_code": 0.09,
+          "paste_link": 0.05,
+          "type_long_code": 0
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.95,
+        "probabilities": {
+          "auto_accept_own": 0.97,
+          "ask_every_time": 0.03,
+          "accept_anyone": 0
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.85,
+        "probabilities": {
+          "downloads": 0.09,
+          "photo_library": 0.89,
+          "ask_each_time": 0.01,
+          "app_folder": 0.01
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "priya",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "no_iphone_app",
+        "confidence": 0.45,
+        "probabilities": {
+          "install_warnings": 0.02,
+          "no_iphone_app": 0.53,
+          "pairing_effort": 0.05,
+          "repairing": 0.14,
+          "hidden_files": 0.26,
+          "network_blocked": 0,
+          "no_internet_mode": 0
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "priya",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.24
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.13
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.57
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.58
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.73,
+        "probabilities": {
+          "type_long_code": 0,
+          "paste_link": 0.03,
+          "type_short_code": 0.12,
+          "scan_qr": 0.78,
+          "tap_and_compare": 0.07
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.98,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0.01,
+          "auto_accept_own": 0.99
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.87,
+        "probabilities": {
+          "app_folder": 0.01,
+          "ask_each_time": 0.01,
+          "photo_library": 0.9,
+          "downloads": 0.08
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "priya",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "no_iphone_app",
+        "confidence": 0.36,
+        "probabilities": {
+          "no_internet_mode": 0,
+          "network_blocked": 0,
+          "hidden_files": 0.4,
+          "repairing": 0.09,
+          "pairing_effort": 0.03,
+          "no_iphone_app": 0.45,
+          "install_warnings": 0.03
+        }
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.39
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.17
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.88
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.78
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.9
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.75
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.86
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.76
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.7
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.76
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.86
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.77
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.74
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.37
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.71
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.89
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.77
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.87
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.62
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.86
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.73
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.7
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.9
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.8
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "marcus",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.86
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.75
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "marcus",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.56
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.22
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.76
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.57,
+        "probabilities": {
+          "tap_and_compare": 0.18,
+          "scan_qr": 0.66,
+          "type_short_code": 0.05,
+          "paste_link": 0.11,
+          "type_long_code": 0
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.98,
+        "probabilities": {
+          "auto_accept_own": 0.99,
+          "ask_every_time": 0.01,
+          "accept_anyone": 0
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.36,
+        "probabilities": {
+          "downloads": 0.3,
+          "photo_library": 0.52,
+          "ask_each_time": 0.01,
+          "app_folder": 0.17
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "marcus",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "repairing",
+        "confidence": 0.44,
+        "probabilities": {
+          "install_warnings": 0.01,
+          "no_iphone_app": 0.01,
+          "pairing_effort": 0.18,
+          "repairing": 0.52,
+          "hidden_files": 0.08,
+          "network_blocked": 0,
+          "no_internet_mode": 0.2
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "marcus",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.54
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.25
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.77
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.42
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.66,
+        "probabilities": {
+          "type_long_code": 0,
+          "paste_link": 0.06,
+          "type_short_code": 0.18,
+          "scan_qr": 0.73,
+          "tap_and_compare": 0.03
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 1,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0,
+          "auto_accept_own": 1
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.4,
+        "probabilities": {
+          "app_folder": 0.09,
+          "ask_each_time": 0.01,
+          "photo_library": 0.55,
+          "downloads": 0.35
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "marcus",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "repairing",
+        "confidence": 0.37,
+        "probabilities": {
+          "no_internet_mode": 0.15,
+          "network_blocked": 0,
+          "hidden_files": 0.23,
+          "repairing": 0.45999999999999996,
+          "pairing_effort": 0.11,
+          "no_iphone_app": 0.03,
+          "install_warnings": 0.02
+        }
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.34
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.27
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.79
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.82
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.82
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.78
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.8
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.63
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.81
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.81
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.66
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.58
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.72
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.72
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.74
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.73
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.54
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.53
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.52
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.72
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.71
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.74
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.81
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "elena",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.76
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.77
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "elena",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.11
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.74
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.33
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.37,
+        "probabilities": {
+          "tap_and_compare": 0.27,
+          "scan_qr": 0.5,
+          "type_short_code": 0.05,
+          "paste_link": 0.18,
+          "type_long_code": 0
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.98,
+        "probabilities": {
+          "auto_accept_own": 0.99,
+          "ask_every_time": 0.01,
+          "accept_anyone": 0
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "downloads",
+        "confidence": 0.09,
+        "probabilities": {
+          "downloads": 0.32,
+          "photo_library": 0.18,
+          "ask_each_time": 0.31,
+          "app_folder": 0.19
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "elena",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "repairing",
+        "confidence": 0.4,
+        "probabilities": {
+          "install_warnings": 0.01,
+          "no_iphone_app": 0.07,
+          "pairing_effort": 0.17,
+          "repairing": 0.49,
+          "hidden_files": 0.23,
+          "network_blocked": 0,
+          "no_internet_mode": 0.03
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "elena",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.2
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.1
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.75
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.36
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.59,
+        "probabilities": {
+          "type_long_code": 0.01,
+          "paste_link": 0.1,
+          "type_short_code": 0.1,
+          "scan_qr": 0.67,
+          "tap_and_compare": 0.12
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 1,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0,
+          "auto_accept_own": 1
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "downloads",
+        "confidence": 0.36,
+        "probabilities": {
+          "app_folder": 0.18,
+          "ask_each_time": 0.17,
+          "photo_library": 0.13,
+          "downloads": 0.52
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "elena",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "hidden_files",
+        "confidence": 0.37,
+        "probabilities": {
+          "no_internet_mode": 0.02,
+          "network_blocked": 0,
+          "hidden_files": 0.46,
+          "repairing": 0.35,
+          "pairing_effort": 0.06,
+          "no_iphone_app": 0.09,
+          "install_warnings": 0.02
+        }
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.41
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.21
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.88
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.69
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.89
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.67
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.61
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.71
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.66
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.87
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.65
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.85
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.47
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.87
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.64
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.89
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.67
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.78
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.46
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.6
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.87
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.65
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.88
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.71
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "sam",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.86
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.65
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "sam",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.24
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.12
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.78
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.51,
+        "probabilities": {
+          "tap_and_compare": 0.31,
+          "scan_qr": 0.61,
+          "type_short_code": 0.05,
+          "paste_link": 0.02,
+          "type_long_code": 0.01
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.95,
+        "probabilities": {
+          "auto_accept_own": 0.97,
+          "ask_every_time": 0.03,
+          "accept_anyone": 0
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.45,
+        "probabilities": {
+          "downloads": 0.21,
+          "photo_library": 0.59,
+          "ask_each_time": 0.19,
+          "app_folder": 0.01
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "sam",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "repairing",
+        "confidence": 0.52,
+        "probabilities": {
+          "install_warnings": 0.03,
+          "no_iphone_app": 0.01,
+          "pairing_effort": 0.16,
+          "repairing": 0.59,
+          "hidden_files": 0.2,
+          "network_blocked": 0,
+          "no_internet_mode": 0.01
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "sam",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.23
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.12
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.79
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.4
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.46,
+        "probabilities": {
+          "type_long_code": 0.01,
+          "paste_link": 0.01,
+          "type_short_code": 0.12,
+          "scan_qr": 0.57,
+          "tap_and_compare": 0.29
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.98,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0.01,
+          "auto_accept_own": 0.99
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.33,
+        "probabilities": {
+          "app_folder": 0.01,
+          "ask_each_time": 0.09,
+          "photo_library": 0.5,
+          "downloads": 0.4
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "sam",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "hidden_files",
+        "confidence": 0.44,
+        "probabilities": {
+          "no_internet_mode": 0,
+          "network_blocked": 0,
+          "hidden_files": 0.52,
+          "repairing": 0.41,
+          "pairing_effort": 0.03,
+          "no_iphone_app": 0.01,
+          "install_warnings": 0.03
+        }
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.28
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.24
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.84
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.79
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.84
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.5
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.69
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.61
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.79
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.76
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.82
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.67
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.6
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.76
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.79
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.78
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.81
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.62
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.43
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.74
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.76
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.76
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.78
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.8
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.83
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "grace",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.77
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.79
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "grace",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.5
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.13
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.58
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.56
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.36,
+        "probabilities": {
+          "tap_and_compare": 0.24,
+          "scan_qr": 0.49,
+          "type_short_code": 0.14,
+          "paste_link": 0.13,
+          "type_long_code": 0
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.94,
+        "probabilities": {
+          "auto_accept_own": 0.96,
+          "ask_every_time": 0.03,
+          "accept_anyone": 0.01
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "downloads",
+        "confidence": 0.25,
+        "probabilities": {
+          "downloads": 0.44,
+          "photo_library": 0.39,
+          "ask_each_time": 0.05,
+          "app_folder": 0.12
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "grace",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "no_iphone_app",
+        "confidence": 0.28,
+        "probabilities": {
+          "install_warnings": 0.02,
+          "no_iphone_app": 0.38,
+          "pairing_effort": 0.14,
+          "repairing": 0.22,
+          "hidden_files": 0.23,
+          "network_blocked": 0,
+          "no_internet_mode": 0.01
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "grace",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.46
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.14
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.51
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.6
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.52,
+        "probabilities": {
+          "type_long_code": 0,
+          "paste_link": 0.07,
+          "type_short_code": 0.22,
+          "scan_qr": 0.62,
+          "tap_and_compare": 0.09
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 1,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0,
+          "auto_accept_own": 1
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "downloads",
+        "confidence": 0.45,
+        "probabilities": {
+          "app_folder": 0.04,
+          "ask_each_time": 0.03,
+          "photo_library": 0.34,
+          "downloads": 0.59
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "grace",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "hidden_files",
+        "confidence": 0.31,
+        "probabilities": {
+          "no_internet_mode": 0,
+          "network_blocked": 0,
+          "hidden_files": 0.41000000000000003,
+          "repairing": 0.15,
+          "pairing_effort": 0.03,
+          "no_iphone_app": 0.39,
+          "install_warnings": 0.02
+        }
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.41
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.23
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.86
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.7
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.69
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.74
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.62
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.73
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.69
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.83
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.66
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.78
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.55
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.82
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.63
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.83
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.67
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.79
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.51
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.79
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.65
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.82
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.66
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.82
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.7
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "kenji",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.83
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.64
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "kenji",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.69
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.86
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.68
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.56
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.45,
+        "probabilities": {
+          "tap_and_compare": 0.13,
+          "scan_qr": 0.56,
+          "type_short_code": 0.03,
+          "paste_link": 0.27,
+          "type_long_code": 0
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.98,
+        "probabilities": {
+          "auto_accept_own": 0.99,
+          "ask_every_time": 0.01,
+          "accept_anyone": 0
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "downloads",
+        "confidence": 0.4,
+        "probabilities": {
+          "downloads": 0.55,
+          "photo_library": 0.12,
+          "ask_each_time": 0.11,
+          "app_folder": 0.22
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "kenji",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "repairing",
+        "confidence": 0.24,
+        "probabilities": {
+          "install_warnings": 0.02,
+          "no_iphone_app": 0.17,
+          "pairing_effort": 0.24,
+          "repairing": 0.35,
+          "hidden_files": 0.15,
+          "network_blocked": 0.05,
+          "no_internet_mode": 0.02
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "kenji",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.67
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.85
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.68
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.56
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.64,
+        "probabilities": {
+          "type_long_code": 0,
+          "paste_link": 0.15,
+          "type_short_code": 0.09,
+          "scan_qr": 0.71,
+          "tap_and_compare": 0.05
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 1,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0,
+          "auto_accept_own": 1
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "downloads",
+        "confidence": 0.52,
+        "probabilities": {
+          "app_folder": 0.19,
+          "ask_each_time": 0.04,
+          "photo_library": 0.13,
+          "downloads": 0.64
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "kenji",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "repairing",
+        "confidence": 0.22,
+        "probabilities": {
+          "no_internet_mode": 0.01,
+          "network_blocked": 0.04,
+          "hidden_files": 0.24,
+          "repairing": 0.33,
+          "pairing_effort": 0.11,
+          "no_iphone_app": 0.25,
+          "install_warnings": 0.02
+        }
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.19
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.32
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.64
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.83
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.62
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.82
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.34
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.75
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.43
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.79
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.51
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.8
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.57
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.67
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.59
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.81
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.6
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.82
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.59
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.56
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.81
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.59
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.81
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.62
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.82
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "linda",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.6
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.82
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "linda",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.27
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.28
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.28
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.68
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "tap_and_compare",
+        "confidence": 0.49,
+        "probabilities": {
+          "tap_and_compare": 0.59,
+          "scan_qr": 0.17,
+          "type_short_code": 0.18,
+          "paste_link": 0.05,
+          "type_long_code": 0.01
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.85,
+        "probabilities": {
+          "auto_accept_own": 0.9,
+          "ask_every_time": 0.1,
+          "accept_anyone": 0
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.83,
+        "probabilities": {
+          "downloads": 0.11,
+          "photo_library": 0.87,
+          "ask_each_time": 0.01,
+          "app_folder": 0.01
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "linda",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "no_iphone_app",
+        "confidence": 0.58,
+        "probabilities": {
+          "install_warnings": 0.02,
+          "no_iphone_app": 0.64,
+          "pairing_effort": 0.08,
+          "repairing": 0.06,
+          "hidden_files": 0.2,
+          "network_blocked": 0,
+          "no_internet_mode": 0
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "linda",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.28
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.24
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.3
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.68
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "tap_and_compare",
+        "confidence": 0.21,
+        "probabilities": {
+          "type_long_code": 0,
+          "paste_link": 0.06,
+          "type_short_code": 0.35,
+          "scan_qr": 0.22,
+          "tap_and_compare": 0.37
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.97,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0.02,
+          "auto_accept_own": 0.98
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.75,
+        "probabilities": {
+          "app_folder": 0.01,
+          "ask_each_time": 0.01,
+          "photo_library": 0.81,
+          "downloads": 0.17
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "linda",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "no_iphone_app",
+        "confidence": 0.58,
+        "probabilities": {
+          "no_internet_mode": 0,
+          "network_blocked": 0,
+          "hidden_files": 0.19,
+          "repairing": 0.07,
+          "pairing_effort": 0.05,
+          "no_iphone_app": 0.64,
+          "install_warnings": 0.05
+        }
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "current_preview",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.36
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.34
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.87
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_plus_internet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_platforms",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_signed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.74
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.84
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_pairing",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_remembered",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.79
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.78
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_two_way",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_auto_accept",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.84
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_save_location",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.65
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.78
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_share_sheet",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.82
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_background",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.83
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_qr_scan",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.83
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.87
+      }
+    }
+  },
+  {
+    "kind": "adoption",
+    "personaId": "ravi",
+    "variantId": "launch_without_updates",
+    "model": "jev-1.14.0",
+    "answers": {
+      "completes_first_transfer": {
+        "type": "noul",
+        "noul": 0.81
+      },
+      "keeps_using": {
+        "type": "noul",
+        "noul": 0.86
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "ravi",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.56
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.36
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.54
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.44
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.36,
+        "probabilities": {
+          "tap_and_compare": 0.44,
+          "scan_qr": 0.49,
+          "type_short_code": 0.05,
+          "paste_link": 0.02,
+          "type_long_code": 0
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.92,
+        "probabilities": {
+          "auto_accept_own": 0.95,
+          "ask_every_time": 0.05,
+          "accept_anyone": 0
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.85,
+        "probabilities": {
+          "downloads": 0.05,
+          "photo_library": 0.89,
+          "ask_each_time": 0.04,
+          "app_folder": 0.02
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "ravi",
+    "order": "listed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "hidden_files",
+        "confidence": 0.37,
+        "probabilities": {
+          "install_warnings": 0.03,
+          "no_iphone_app": 0,
+          "pairing_effort": 0.15,
+          "repairing": 0.35,
+          "hidden_files": 0.46,
+          "network_blocked": 0.01,
+          "no_internet_mode": 0
+        }
+      }
+    }
+  },
+  {
+    "kind": "design",
+    "personaId": "ravi",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "needs_internet_often": {
+        "type": "noul",
+        "noul": 0.52
+      },
+      "network_likely_blocks_lan": {
+        "type": "noul",
+        "noul": 0.36
+      },
+      "expects_background_on_phone": {
+        "type": "noul",
+        "noul": 0.58
+      },
+      "cares_about_install_size": {
+        "type": "noul",
+        "noul": 0.45
+      },
+      "pairing_method": {
+        "type": "choice",
+        "choice": "scan_qr",
+        "confidence": 0.6,
+        "probabilities": {
+          "type_long_code": 0,
+          "paste_link": 0.02,
+          "type_short_code": 0.13,
+          "scan_qr": 0.68,
+          "tap_and_compare": 0.17
+        }
+      },
+      "receive_policy": {
+        "type": "choice",
+        "choice": "auto_accept_own",
+        "confidence": 0.98,
+        "probabilities": {
+          "accept_anyone": 0,
+          "ask_every_time": 0.01,
+          "auto_accept_own": 0.99
+        }
+      },
+      "save_location": {
+        "type": "choice",
+        "choice": "photo_library",
+        "confidence": 0.88,
+        "probabilities": {
+          "app_folder": 0.01,
+          "ask_each_time": 0.01,
+          "photo_library": 0.91,
+          "downloads": 0.07
+        }
+      }
+    }
+  },
+  {
+    "kind": "diagnosis",
+    "personaId": "ravi",
+    "order": "reversed",
+    "model": "jev-1.14.0",
+    "answers": {
+      "deal_breaker": {
+        "type": "choice",
+        "choice": "hidden_files",
+        "confidence": 0.65,
+        "probabilities": {
+          "no_internet_mode": 0,
+          "network_blocked": 0,
+          "hidden_files": 0.7,
+          "repairing": 0.23,
+          "pairing_effort": 0.04,
+          "no_iphone_app": 0,
+          "install_warnings": 0.03
+        }
+      }
+    }
+  }
+]

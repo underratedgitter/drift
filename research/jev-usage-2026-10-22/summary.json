@@ -1,0 +1,1327 @@
+{
+  "model": [
+    "jev-1.14.0"
+  ],
+  "askedAt": "2026-10-22T13:09:26.371Z",
+  "requests": 144,
+  "inputTokens": 141234,
+  "thresholds": {
+    "MUST": 0.1,
+    "SHOULD": 0.03,
+    "DEAL_BREAKER": 0.25
+  },
+  "variantSummary": {
+    "current_preview": {
+      "completes": 0.321,
+      "keeps": 0.251,
+      "adoption": 0.079
+    },
+    "launch": {
+      "completes": 0.815,
+      "keeps": 0.8,
+      "adoption": 0.65
+    },
+    "launch_plus_internet": {
+      "completes": 0.815,
+      "keeps": 0.789,
+      "adoption": 0.64
+    },
+    "launch_without_platforms": {
+      "completes": 0.65,
+      "keeps": 0.731,
+      "adoption": 0.475
+    },
+    "launch_without_signed": {
+      "completes": 0.64,
+      "keeps": 0.771,
+      "adoption": 0.492
+    },
+    "launch_without_pairing": {
+      "completes": 0.78,
+      "keeps": 0.779,
+      "adoption": 0.605
+    },
+    "launch_without_remembered": {
+      "completes": 0.72,
+      "keeps": 0.594,
+      "adoption": 0.425
+    },
+    "launch_without_two_way": {
+      "completes": 0.778,
+      "keeps": 0.751,
+      "adoption": 0.582
+    },
+    "launch_without_auto_accept": {
+      "completes": 0.799,
+      "keeps": 0.773,
+      "adoption": 0.615
+    },
+    "launch_without_save_location": {
+      "completes": 0.649,
+      "keeps": 0.558,
+      "adoption": 0.362
+    },
+    "launch_without_share_sheet": {
+      "completes": 0.731,
+      "keeps": 0.749,
+      "adoption": 0.546
+    },
+    "launch_without_background": {
+      "completes": 0.779,
+      "keeps": 0.755,
+      "adoption": 0.586
+    },
+    "launch_without_qr_scan": {
+      "completes": 0.81,
+      "keeps": 0.801,
+      "adoption": 0.648
+    },
+    "launch_without_updates": {
+      "completes": 0.786,
+      "keeps": 0.766,
+      "adoption": 0.6
+    }
+  },
+  "importance": [
+    {
+      "id": "save_location",
+      "label": "Files land in Downloads / Files / Photos",
+      "meanDrop": 0.288,
+      "tier": "must-have for launch",
+      "dealBreakerFor": [
+        "priya",
+        "elena",
+        "grace",
+        "linda"
+      ],
+      "drops": {
+        "priya": 0.457,
+        "marcus": 0.147,
+        "elena": 0.362,
+        "sam": 0.248,
+        "grace": 0.405,
+        "kenji": 0.199,
+        "linda": 0.265,
+        "ravi": 0.224
+      }
+    },
+    {
+      "id": "remembered",
+      "label": "Devices stay paired after restarts",
+      "meanDrop": 0.225,
+      "tier": "must-have for launch",
+      "dealBreakerFor": [
+        "marcus",
+        "elena",
+        "grace"
+      ],
+      "drops": {
+        "priya": 0.211,
+        "marcus": 0.412,
+        "elena": 0.265,
+        "sam": 0.208,
+        "grace": 0.27,
+        "kenji": 0.173,
+        "linda": 0.149,
+        "ravi": 0.115
+      }
+    },
+    {
+      "id": "platforms",
+      "label": "Native apps on all five platforms",
+      "meanDrop": 0.174,
+      "tier": "must-have for launch",
+      "dealBreakerFor": [
+        "priya",
+        "grace",
+        "linda"
+      ],
+      "drops": {
+        "priya": 0.471,
+        "marcus": 0.032,
+        "elena": 0.024,
+        "sam": 0.113,
+        "grace": 0.327,
+        "kenji": 0.143,
+        "linda": 0.276,
+        "ravi": 0.009
+      }
+    },
+    {
+      "id": "signed",
+      "label": "Signed, notarized installers",
+      "meanDrop": 0.158,
+      "tier": "must-have for launch",
+      "dealBreakerFor": [],
+      "drops": {
+        "priya": 0.249,
+        "marcus": 0.154,
+        "elena": 0.138,
+        "sam": 0.138,
+        "grace": 0.19,
+        "kenji": 0.098,
+        "linda": 0.191,
+        "ravi": 0.109
+      }
+    },
+    {
+      "id": "share_sheet",
+      "label": "Send from the share sheet",
+      "meanDrop": 0.104,
+      "tier": "must-have for launch",
+      "dealBreakerFor": [
+        "elena"
+      ],
+      "drops": {
+        "priya": 0.068,
+        "marcus": 0.058,
+        "elena": 0.274,
+        "sam": 0.127,
+        "grace": 0.11,
+        "kenji": 0.088,
+        "linda": 0.077,
+        "ravi": 0.026
+      }
+    },
+    {
+      "id": "two_way",
+      "label": "One pairing works in both directions",
+      "meanDrop": 0.068,
+      "tier": "should-have",
+      "dealBreakerFor": [],
+      "drops": {
+        "priya": 0.033,
+        "marcus": 0.09,
+        "elena": 0.13,
+        "sam": 0.05,
+        "grace": 0.072,
+        "kenji": 0.085,
+        "linda": 0.053,
+        "ravi": 0.034
+      }
+    },
+    {
+      "id": "background",
+      "label": "Receives in the background on computers",
+      "meanDrop": 0.064,
+      "tier": "should-have",
+      "dealBreakerFor": [],
+      "drops": {
+        "priya": 0.042,
+        "marcus": 0.098,
+        "elena": 0.123,
+        "sam": 0.041,
+        "grace": 0.079,
+        "kenji": 0.061,
+        "linda": 0.053,
+        "ravi": 0.017
+      }
+    },
+    {
+      "id": "updates",
+      "label": "Automatic updates",
+      "meanDrop": 0.05,
+      "tier": "should-have",
+      "dealBreakerFor": [],
+      "drops": {
+        "priya": 0.042,
+        "marcus": 0.041,
+        "elena": 0.063,
+        "sam": 0.048,
+        "grace": 0.064,
+        "kenji": 0.071,
+        "linda": 0.039,
+        "ravi": 0.034
+      }
+    },
+    {
+      "id": "pairing",
+      "label": "Tap a nearby device and compare a 6-digit code",
+      "meanDrop": 0.045,
+      "tier": "should-have",
+      "dealBreakerFor": [],
+      "drops": {
+        "priya": 0.034,
+        "marcus": 0.024,
+        "elena": 0,
+        "sam": 0.041,
+        "grace": 0.049,
+        "kenji": 0.054,
+        "linda": 0.123,
+        "ravi": 0.034
+      }
+    },
+    {
+      "id": "auto_accept",
+      "label": "Optional auto-accept from your own devices",
+      "meanDrop": 0.035,
+      "tier": "should-have",
+      "dealBreakerFor": [],
+      "drops": {
+        "priya": 0.025,
+        "marcus": 0.001,
+        "elena": 0.108,
+        "sam": 0.011,
+        "grace": 0.04,
+        "kenji": 0.046,
+        "linda": 0.039,
+        "ravi": 0.009
+      }
+    },
+    {
+      "id": "qr_scan",
+      "label": "Camera QR scanning",
+      "meanDrop": 0.002,
+      "tier": "defer",
+      "dealBreakerFor": [],
+      "drops": {
+        "priya": 0,
+        "marcus": -0.034,
+        "elena": 0,
+        "sam": -0.018,
+        "grace": 0.008,
+        "kenji": 0.028,
+        "linda": 0.023,
+        "ravi": 0.009
+      }
+    }
+  ],
+  "internetGain": -0.01,
+  "design": {
+    "pairing_method": {
+      "overall": {
+        "tap_and_compare": 0.224,
+        "scan_qr": 0.568,
+        "type_short_code": 0.122,
+        "paste_link": 0.083,
+        "type_long_code": 0.003
+      },
+      "winner": "scan_qr",
+      "perPersona": {
+        "priya": {
+          "choice": "scan_qr",
+          "probabilities": {
+            "tap_and_compare": 0.15,
+            "scan_qr": 0.705,
+            "type_short_code": 0.105,
+            "paste_link": 0.04,
+            "type_long_code": 0
+          },
+          "orderAgreement": true
+        },
+        "marcus": {
+          "choice": "scan_qr",
+          "probabilities": {
+            "tap_and_compare": 0.105,
+            "scan_qr": 0.695,
+            "type_short_code": 0.115,
+            "paste_link": 0.085,
+            "type_long_code": 0
+          },
+          "orderAgreement": true
+        },
+        "elena": {
+          "choice": "scan_qr",
+          "probabilities": {
+            "tap_and_compare": 0.195,
+            "scan_qr": 0.585,
+            "type_short_code": 0.075,
+            "paste_link": 0.14,
+            "type_long_code": 0.005
+          },
+          "orderAgreement": true
+        },
+        "sam": {
+          "choice": "scan_qr",
+          "probabilities": {
+            "tap_and_compare": 0.3,
+            "scan_qr": 0.59,
+            "type_short_code": 0.085,
+            "paste_link": 0.015,
+            "type_long_code": 0.01
+          },
+          "orderAgreement": true
+        },
+        "grace": {
+          "choice": "scan_qr",
+          "probabilities": {
+            "tap_and_compare": 0.165,
+            "scan_qr": 0.555,
+            "type_short_code": 0.18,
+            "paste_link": 0.1,
+            "type_long_code": 0
+          },
+          "orderAgreement": true
+        },
+        "kenji": {
+          "choice": "scan_qr",
+          "probabilities": {
+            "tap_and_compare": 0.09,
+            "scan_qr": 0.635,
+            "type_short_code": 0.06,
+            "paste_link": 0.21,
+            "type_long_code": 0
+          },
+          "orderAgreement": true
+        },
+        "linda": {
+          "choice": "tap_and_compare",
+          "probabilities": {
+            "tap_and_compare": 0.48,
+            "scan_qr": 0.195,
+            "type_short_code": 0.265,
+            "paste_link": 0.055,
+            "type_long_code": 0.005
+          },
+          "orderAgreement": true
+        },
+        "ravi": {
+          "choice": "scan_qr",
+          "probabilities": {
+            "tap_and_compare": 0.305,
+            "scan_qr": 0.585,
+            "type_short_code": 0.09,
+            "paste_link": 0.02,
+            "type_long_code": 0
+          },
+          "orderAgreement": true
+        }
+      }
+    },
+    "receive_policy": {
+      "overall": {
+        "auto_accept_own": 0.979,
+        "ask_every_time": 0.02,
+        "accept_anyone": 0.001
+      },
+      "winner": "auto_accept_own",
+      "perPersona": {
+        "priya": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.98,
+            "ask_every_time": 0.02,
+            "accept_anyone": 0
+          },
+          "orderAgreement": true
+        },
+        "marcus": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.995,
+            "ask_every_time": 0.005,
+            "accept_anyone": 0
+          },
+          "orderAgreement": true
+        },
+        "elena": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.995,
+            "ask_every_time": 0.005,
+            "accept_anyone": 0
+          },
+          "orderAgreement": true
+        },
+        "sam": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.98,
+            "ask_every_time": 0.02,
+            "accept_anyone": 0
+          },
+          "orderAgreement": true
+        },
+        "grace": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.98,
+            "ask_every_time": 0.015,
+            "accept_anyone": 0.005
+          },
+          "orderAgreement": true
+        },
+        "kenji": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.995,
+            "ask_every_time": 0.005,
+            "accept_anyone": 0
+          },
+          "orderAgreement": true
+        },
+        "linda": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.94,
+            "ask_every_time": 0.06,
+            "accept_anyone": 0
+          },
+          "orderAgreement": true
+        },
+        "ravi": {
+          "choice": "auto_accept_own",
+          "probabilities": {
+            "auto_accept_own": 0.97,
+            "ask_every_time": 0.03,
+            "accept_anyone": 0
+          },
+          "orderAgreement": true
+        }
+      }
+    },
+    "save_location": {
+      "overall": {
+        "downloads": 0.306,
+        "photo_library": 0.545,
+        "ask_each_time": 0.069,
+        "app_folder": 0.081
+      },
+      "winner": "photo_library",
+      "perPersona": {
+        "priya": {
+          "choice": "photo_library",
+          "probabilities": {
+            "downloads": 0.085,
+            "photo_library": 0.895,
+            "ask_each_time": 0.01,
+            "app_folder": 0.01
+          },
+          "orderAgreement": true
+        },
+        "marcus": {
+          "choice": "photo_library",
+          "probabilities": {
+            "downloads": 0.325,
+            "photo_library": 0.535,
+            "ask_each_time": 0.01,
+            "app_folder": 0.13
+          },
+          "orderAgreement": true
+        },
+        "elena": {
+          "choice": "downloads",
+          "probabilities": {
+            "downloads": 0.42,
+            "photo_library": 0.155,
+            "ask_each_time": 0.24,
+            "app_folder": 0.185
+          },
+          "orderAgreement": true
+        },
+        "sam": {
+          "choice": "photo_library",
+          "probabilities": {
+            "downloads": 0.305,
+            "photo_library": 0.545,
+            "ask_each_time": 0.14,
+            "app_folder": 0.01
+          },
+          "orderAgreement": true
+        },
+        "grace": {
+          "choice": "downloads",
+          "probabilities": {
+            "downloads": 0.515,
+            "photo_library": 0.365,
+            "ask_each_time": 0.04,
+            "app_folder": 0.08
+          },
+          "orderAgreement": true
+        },
+        "kenji": {
+          "choice": "downloads",
+          "probabilities": {
+            "downloads": 0.595,
+            "photo_library": 0.125,
+            "ask_each_time": 0.075,
+            "app_folder": 0.205
+          },
+          "orderAgreement": true
+        },
+        "linda": {
+          "choice": "photo_library",
+          "probabilities": {
+            "downloads": 0.14,
+            "photo_library": 0.84,
+            "ask_each_time": 0.01,
+            "app_folder": 0.01
+          },
+          "orderAgreement": true
+        },
+        "ravi": {
+          "choice": "photo_library",
+          "probabilities": {
+            "downloads": 0.06,
+            "photo_library": 0.9,
+            "ask_each_time": 0.025,
+            "app_folder": 0.015
+          },
+          "orderAgreement": true
+        }
+      }
+    },
+    "deal_breaker": {
+      "overall": {
+        "install_warnings": 0.024,
+        "no_iphone_app": 0.229,
+        "pairing_effort": 0.102,
+        "repairing": 0.301,
+        "hidden_files": 0.31,
+        "network_blocked": 0.006,
+        "no_internet_mode": 0.028
+      },
+      "winner": "hidden_files",
+      "perPersona": {
+        "priya": {
+          "choice": "no_iphone_app",
+          "probabilities": {
+            "install_warnings": 0.025,
+            "no_iphone_app": 0.49,
+            "pairing_effort": 0.04,
+            "repairing": 0.115,
+            "hidden_files": 0.33,
+            "network_blocked": 0,
+            "no_internet_mode": 0
+          },
+          "orderAgreement": true
+        },
+        "marcus": {
+          "choice": "repairing",
+          "probabilities": {
+            "install_warnings": 0.015,
+            "no_iphone_app": 0.02,
+            "pairing_effort": 0.145,
+            "repairing": 0.49,
+            "hidden_files": 0.155,
+            "network_blocked": 0,
+            "no_internet_mode": 0.175
+          },
+          "orderAgreement": true
+        },
+        "elena": {
+          "choice": "repairing",
+          "probabilities": {
+            "install_warnings": 0.015,
+            "no_iphone_app": 0.08,
+            "pairing_effort": 0.115,
+            "repairing": 0.42,
+            "hidden_files": 0.345,
+            "network_blocked": 0,
+            "no_internet_mode": 0.025
+          },
+          "orderAgreement": false
+        },
+        "sam": {
+          "choice": "repairing",
+          "probabilities": {
+            "install_warnings": 0.03,
+            "no_iphone_app": 0.01,
+            "pairing_effort": 0.095,
+            "repairing": 0.5,
+            "hidden_files": 0.36,
+            "network_blocked": 0,
+            "no_internet_mode": 0.005
+          },
+          "orderAgreement": false
+        },
+        "grace": {
+          "choice": "no_iphone_app",
+          "probabilities": {
+            "install_warnings": 0.02,
+            "no_iphone_app": 0.385,
+            "pairing_effort": 0.085,
+            "repairing": 0.185,
+            "hidden_files": 0.32,
+            "network_blocked": 0,
+            "no_internet_mode": 0.005
+          },
+          "orderAgreement": false
+        },
+        "kenji": {
+          "choice": "repairing",
+          "probabilities": {
+            "install_warnings": 0.02,
+            "no_iphone_app": 0.21,
+            "pairing_effort": 0.175,
+            "repairing": 0.34,
+            "hidden_files": 0.195,
+            "network_blocked": 0.045,
+            "no_internet_mode": 0.015
+          },
+          "orderAgreement": true
+        },
+        "linda": {
+          "choice": "no_iphone_app",
+          "probabilities": {
+            "install_warnings": 0.035,
+            "no_iphone_app": 0.64,
+            "pairing_effort": 0.065,
+            "repairing": 0.065,
+            "hidden_files": 0.195,
+            "network_blocked": 0,
+            "no_internet_mode": 0
+          },
+          "orderAgreement": true
+        },
+        "ravi": {
+          "choice": "hidden_files",
+          "probabilities": {
+            "install_warnings": 0.03,
+            "no_iphone_app": 0,
+            "pairing_effort": 0.095,
+            "repairing": 0.29,
+            "hidden_files": 0.58,
+            "network_blocked": 0.005,
+            "no_internet_mode": 0
+          },
+          "orderAgreement": true
+        }
+      }
+    }
+  },
+  "context": {
+    "needs_internet_often": {
+      "mean": 0.399,
+      "perPersona": {
+        "priya": 0.23,
+        "marcus": 0.55,
+        "elena": 0.2,
+        "sam": 0.235,
+        "grace": 0.48,
+        "kenji": 0.68,
+        "linda": 0.275,
+        "ravi": 0.54
+      }
+    },
+    "network_likely_blocks_lan": {
+      "mean": 0.276,
+      "perPersona": {
+        "priya": 0.135,
+        "marcus": 0.235,
+        "elena": 0.105,
+        "sam": 0.12,
+        "grace": 0.135,
+        "kenji": 0.855,
+        "linda": 0.26,
+        "ravi": 0.36
+      }
+    },
+    "expects_background_on_phone": {
+      "mean": 0.619,
+      "perPersona": {
+        "priya": 0.58,
+        "marcus": 0.765,
+        "elena": 0.745,
+        "sam": 0.785,
+        "grace": 0.545,
+        "kenji": 0.68,
+        "linda": 0.29,
+        "ravi": 0.56
+      }
+    },
+    "cares_about_install_size": {
+      "mean": 0.504,
+      "perPersona": {
+        "priya": 0.58,
+        "marcus": 0.42,
+        "elena": 0.345,
+        "sam": 0.425,
+        "grace": 0.58,
+        "kenji": 0.56,
+        "linda": 0.68,
+        "ravi": 0.445
+      }
+    }
+  },
+  "adoption": {
+    "current_preview": {
+      "priya": {
+        "completes": 0.19,
+        "keeps": 0.23,
+        "adoption": 0.044
+      },
+      "marcus": {
+        "completes": 0.39,
+        "keeps": 0.17,
+        "adoption": 0.066
+      },
+      "elena": {
+        "completes": 0.34,
+        "keeps": 0.27,
+        "adoption": 0.092
+      },
+      "sam": {
+        "completes": 0.41,
+        "keeps": 0.21,
+        "adoption": 0.086
+      },
+      "grace": {
+        "completes": 0.28,
+        "keeps": 0.24,
+        "adoption": 0.067
+      },
+      "kenji": {
+        "completes": 0.41,
+        "keeps": 0.23,
+        "adoption": 0.094
+      },
+      "linda": {
+        "completes": 0.19,
+        "keeps": 0.32,
+        "adoption": 0.061
+      },
+      "ravi": {
+        "completes": 0.36,
+        "keeps": 0.34,
+        "adoption": 0.122
+      }
+    },
+    "launch": {
+      "priya": {
+        "completes": 0.83,
+        "keeps": 0.87,
+        "adoption": 0.722
+      },
+      "marcus": {
+        "completes": 0.88,
+        "keeps": 0.78,
+        "adoption": 0.686
+      },
+      "elena": {
+        "completes": 0.79,
+        "keeps": 0.82,
+        "adoption": 0.648
+      },
+      "sam": {
+        "completes": 0.88,
+        "keeps": 0.69,
+        "adoption": 0.607
+      },
+      "grace": {
+        "completes": 0.8,
+        "keeps": 0.84,
+        "adoption": 0.672
+      },
+      "kenji": {
+        "completes": 0.86,
+        "keeps": 0.7,
+        "adoption": 0.602
+      },
+      "linda": {
+        "completes": 0.64,
+        "keeps": 0.83,
+        "adoption": 0.531
+      },
+      "ravi": {
+        "completes": 0.84,
+        "keeps": 0.87,
+        "adoption": 0.731
+      }
+    },
+    "launch_plus_internet": {
+      "priya": {
+        "completes": 0.84,
+        "keeps": 0.86,
+        "adoption": 0.722
+      },
+      "marcus": {
+        "completes": 0.9,
+        "keeps": 0.75,
+        "adoption": 0.675
+      },
+      "elena": {
+        "completes": 0.8,
+        "keeps": 0.82,
+        "adoption": 0.656
+      },
+      "sam": {
+        "completes": 0.89,
+        "keeps": 0.67,
+        "adoption": 0.596
+      },
+      "grace": {
+        "completes": 0.79,
+        "keeps": 0.84,
+        "adoption": 0.664
+      },
+      "kenji": {
+        "completes": 0.84,
+        "keeps": 0.69,
+        "adoption": 0.58
+      },
+      "linda": {
+        "completes": 0.62,
+        "keeps": 0.82,
+        "adoption": 0.508
+      },
+      "ravi": {
+        "completes": 0.84,
+        "keeps": 0.86,
+        "adoption": 0.722
+      }
+    },
+    "launch_without_platforms": {
+      "priya": {
+        "completes": 0.33,
+        "keeps": 0.76,
+        "adoption": 0.251
+      },
+      "marcus": {
+        "completes": 0.86,
+        "keeps": 0.76,
+        "adoption": 0.654
+      },
+      "elena": {
+        "completes": 0.78,
+        "keeps": 0.8,
+        "adoption": 0.624
+      },
+      "sam": {
+        "completes": 0.81,
+        "keeps": 0.61,
+        "adoption": 0.494
+      },
+      "grace": {
+        "completes": 0.5,
+        "keeps": 0.69,
+        "adoption": 0.345
+      },
+      "kenji": {
+        "completes": 0.74,
+        "keeps": 0.62,
+        "adoption": 0.459
+      },
+      "linda": {
+        "completes": 0.34,
+        "keeps": 0.75,
+        "adoption": 0.255
+      },
+      "ravi": {
+        "completes": 0.84,
+        "keeps": 0.86,
+        "adoption": 0.722
+      }
+    },
+    "launch_without_signed": {
+      "priya": {
+        "completes": 0.57,
+        "keeps": 0.83,
+        "adoption": 0.473
+      },
+      "marcus": {
+        "completes": 0.7,
+        "keeps": 0.76,
+        "adoption": 0.532
+      },
+      "elena": {
+        "completes": 0.63,
+        "keeps": 0.81,
+        "adoption": 0.51
+      },
+      "sam": {
+        "completes": 0.71,
+        "keeps": 0.66,
+        "adoption": 0.469
+      },
+      "grace": {
+        "completes": 0.61,
+        "keeps": 0.79,
+        "adoption": 0.482
+      },
+      "kenji": {
+        "completes": 0.73,
+        "keeps": 0.69,
+        "adoption": 0.504
+      },
+      "linda": {
+        "completes": 0.43,
+        "keeps": 0.79,
+        "adoption": 0.34
+      },
+      "ravi": {
+        "completes": 0.74,
+        "keeps": 0.84,
+        "adoption": 0.622
+      }
+    },
+    "launch_without_pairing": {
+      "priya": {
+        "completes": 0.8,
+        "keeps": 0.86,
+        "adoption": 0.688
+      },
+      "marcus": {
+        "completes": 0.86,
+        "keeps": 0.77,
+        "adoption": 0.662
+      },
+      "elena": {
+        "completes": 0.8,
+        "keeps": 0.81,
+        "adoption": 0.648
+      },
+      "sam": {
+        "completes": 0.87,
+        "keeps": 0.65,
+        "adoption": 0.566
+      },
+      "grace": {
+        "completes": 0.76,
+        "keeps": 0.82,
+        "adoption": 0.623
+      },
+      "kenji": {
+        "completes": 0.83,
+        "keeps": 0.66,
+        "adoption": 0.548
+      },
+      "linda": {
+        "completes": 0.51,
+        "keeps": 0.8,
+        "adoption": 0.408
+      },
+      "ravi": {
+        "completes": 0.81,
+        "keeps": 0.86,
+        "adoption": 0.697
+      }
+    },
+    "launch_without_remembered": {
+      "priya": {
+        "completes": 0.7,
+        "keeps": 0.73,
+        "adoption": 0.511
+      },
+      "marcus": {
+        "completes": 0.74,
+        "keeps": 0.37,
+        "adoption": 0.274
+      },
+      "elena": {
+        "completes": 0.66,
+        "keeps": 0.58,
+        "adoption": 0.383
+      },
+      "sam": {
+        "completes": 0.85,
+        "keeps": 0.47,
+        "adoption": 0.399
+      },
+      "grace": {
+        "completes": 0.67,
+        "keeps": 0.6,
+        "adoption": 0.402
+      },
+      "kenji": {
+        "completes": 0.78,
+        "keeps": 0.55,
+        "adoption": 0.429
+      },
+      "linda": {
+        "completes": 0.57,
+        "keeps": 0.67,
+        "adoption": 0.382
+      },
+      "ravi": {
+        "completes": 0.79,
+        "keeps": 0.78,
+        "adoption": 0.616
+      }
+    },
+    "launch_without_two_way": {
+      "priya": {
+        "completes": 0.81,
+        "keeps": 0.85,
+        "adoption": 0.689
+      },
+      "marcus": {
+        "completes": 0.84,
+        "keeps": 0.71,
+        "adoption": 0.596
+      },
+      "elena": {
+        "completes": 0.72,
+        "keeps": 0.72,
+        "adoption": 0.518
+      },
+      "sam": {
+        "completes": 0.87,
+        "keeps": 0.64,
+        "adoption": 0.557
+      },
+      "grace": {
+        "completes": 0.76,
+        "keeps": 0.79,
+        "adoption": 0.6
+      },
+      "kenji": {
+        "completes": 0.82,
+        "keeps": 0.63,
+        "adoption": 0.517
+      },
+      "linda": {
+        "completes": 0.59,
+        "keeps": 0.81,
+        "adoption": 0.478
+      },
+      "ravi": {
+        "completes": 0.81,
+        "keeps": 0.86,
+        "adoption": 0.697
+      }
+    },
+    "launch_without_auto_accept": {
+      "priya": {
+        "completes": 0.82,
+        "keeps": 0.85,
+        "adoption": 0.697
+      },
+      "marcus": {
+        "completes": 0.89,
+        "keeps": 0.77,
+        "adoption": 0.685
+      },
+      "elena": {
+        "completes": 0.74,
+        "keeps": 0.73,
+        "adoption": 0.54
+      },
+      "sam": {
+        "completes": 0.89,
+        "keeps": 0.67,
+        "adoption": 0.596
+      },
+      "grace": {
+        "completes": 0.78,
+        "keeps": 0.81,
+        "adoption": 0.632
+      },
+      "kenji": {
+        "completes": 0.83,
+        "keeps": 0.67,
+        "adoption": 0.556
+      },
+      "linda": {
+        "completes": 0.6,
+        "keeps": 0.82,
+        "adoption": 0.492
+      },
+      "ravi": {
+        "completes": 0.84,
+        "keeps": 0.86,
+        "adoption": 0.722
+      }
+    },
+    "launch_without_save_location": {
+      "priya": {
+        "completes": 0.49,
+        "keeps": 0.54,
+        "adoption": 0.265
+      },
+      "marcus": {
+        "completes": 0.87,
+        "keeps": 0.62,
+        "adoption": 0.539
+      },
+      "elena": {
+        "completes": 0.54,
+        "keeps": 0.53,
+        "adoption": 0.286
+      },
+      "sam": {
+        "completes": 0.78,
+        "keeps": 0.46,
+        "adoption": 0.359
+      },
+      "grace": {
+        "completes": 0.62,
+        "keeps": 0.43,
+        "adoption": 0.267
+      },
+      "kenji": {
+        "completes": 0.79,
+        "keeps": 0.51,
+        "adoption": 0.403
+      },
+      "linda": {
+        "completes": 0.45,
+        "keeps": 0.59,
+        "adoption": 0.266
+      },
+      "ravi": {
+        "completes": 0.65,
+        "keeps": 0.78,
+        "adoption": 0.507
+      }
+    },
+    "launch_without_share_sheet": {
+      "priya": {
+        "completes": 0.76,
+        "keeps": 0.86,
+        "adoption": 0.654
+      },
+      "marcus": {
+        "completes": 0.86,
+        "keeps": 0.73,
+        "adoption": 0.628
+      },
+      "elena": {
+        "completes": 0.52,
+        "keeps": 0.72,
+        "adoption": 0.374
+      },
+      "sam": {
+        "completes": 0.8,
+        "keeps": 0.6,
+        "adoption": 0.48
+      },
+      "grace": {
+        "completes": 0.74,
+        "keeps": 0.76,
+        "adoption": 0.562
+      },
+      "kenji": {
+        "completes": 0.79,
+        "keeps": 0.65,
+        "adoption": 0.514
+      },
+      "linda": {
+        "completes": 0.56,
+        "keeps": 0.81,
+        "adoption": 0.454
+      },
+      "ravi": {
+        "completes": 0.82,
+        "keeps": 0.86,
+        "adoption": 0.705
+      }
+    },
+    "launch_without_background": {
+      "priya": {
+        "completes": 0.81,
+        "keeps": 0.84,
+        "adoption": 0.68
+      },
+      "marcus": {
+        "completes": 0.84,
+        "keeps": 0.7,
+        "adoption": 0.588
+      },
+      "elena": {
+        "completes": 0.71,
+        "keeps": 0.74,
+        "adoption": 0.525
+      },
+      "sam": {
+        "completes": 0.87,
+        "keeps": 0.65,
+        "adoption": 0.566
+      },
+      "grace": {
+        "completes": 0.76,
+        "keeps": 0.78,
+        "adoption": 0.593
+      },
+      "kenji": {
+        "completes": 0.82,
+        "keeps": 0.66,
+        "adoption": 0.541
+      },
+      "linda": {
+        "completes": 0.59,
+        "keeps": 0.81,
+        "adoption": 0.478
+      },
+      "ravi": {
+        "completes": 0.83,
+        "keeps": 0.86,
+        "adoption": 0.714
+      }
+    },
+    "launch_without_qr_scan": {
+      "priya": {
+        "completes": 0.83,
+        "keeps": 0.87,
+        "adoption": 0.722
+      },
+      "marcus": {
+        "completes": 0.9,
+        "keeps": 0.8,
+        "adoption": 0.72
+      },
+      "elena": {
+        "completes": 0.8,
+        "keeps": 0.81,
+        "adoption": 0.648
+      },
+      "sam": {
+        "completes": 0.88,
+        "keeps": 0.71,
+        "adoption": 0.625
+      },
+      "grace": {
+        "completes": 0.8,
+        "keeps": 0.83,
+        "adoption": 0.664
+      },
+      "kenji": {
+        "completes": 0.82,
+        "keeps": 0.7,
+        "adoption": 0.574
+      },
+      "linda": {
+        "completes": 0.62,
+        "keeps": 0.82,
+        "adoption": 0.508
+      },
+      "ravi": {
+        "completes": 0.83,
+        "keeps": 0.87,
+        "adoption": 0.722
+      }
+    },
+    "launch_without_updates": {
+      "priya": {
+        "completes": 0.8,
+        "keeps": 0.85,
+        "adoption": 0.68
+      },
+      "marcus": {
+        "completes": 0.86,
+        "keeps": 0.75,
+        "adoption": 0.645
+      },
+      "elena": {
+        "completes": 0.76,
+        "keeps": 0.77,
+        "adoption": 0.585
+      },
+      "sam": {
+        "completes": 0.86,
+        "keeps": 0.65,
+        "adoption": 0.559
+      },
+      "grace": {
+        "completes": 0.77,
+        "keeps": 0.79,
+        "adoption": 0.608
+      },
+      "kenji": {
+        "completes": 0.83,
+        "keeps": 0.64,
+        "adoption": 0.531
+      },
+      "linda": {
+        "completes": 0.6,
+        "keeps": 0.82,
+        "adoption": 0.492
+      },
+      "ravi": {
+        "completes": 0.81,
+        "keeps": 0.86,
+        "adoption": 0.697
+      }
+    }
+  }
+}

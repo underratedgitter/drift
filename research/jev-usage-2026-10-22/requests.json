@@ -1,0 +1,187 @@
+{
+  "personas": {
+    "priya": {
+      "who": "Priya, 34, marketing coordinator, not technical. Uses an iPhone 15 and a Windows 11 laptop at home.",
+      "task": "Move 200 to 500 photos and short videos from her iPhone to her Windows laptop about once a month, to edit and back them up.",
+      "network": "Home Wi-Fi.",
+      "current_methods": "Sends batches to herself on WhatsApp (which compresses them), or plugs in a USB cable and fights with the Windows Photos import."
+    },
+    "marcus": {
+      "who": "Marcus, 27, sales rep, comfortable with apps but not a programmer. Uses a Samsung Galaxy phone and a MacBook Air.",
+      "task": "Send screenshots, PDFs and phone videos between his phone and laptop several times a day.",
+      "network": "Home and office Wi-Fi.",
+      "current_methods": "Telegram saved messages and Google Drive, because AirDrop does not work with Android."
+    },
+    "elena": {
+      "who": "Elena, 41, freelance video editor. Uses a Mac Studio, a Windows workstation for rendering, and an iPhone.",
+      "task": "Move 20 to 200 GB project folders with thousands of files between the Mac and the Windows PC every week.",
+      "network": "Studio Wi-Fi and Ethernet on the same router.",
+      "current_methods": "Copies to an external SSD and walks it over, or uploads to WeTransfer overnight."
+    },
+    "sam": {
+      "who": "Sam, 30, software developer who avoids cloud services for privacy. Uses an Ubuntu Linux laptop and an Android phone.",
+      "task": "Send documents, APKs and photos between phone and laptop a few times a week without any cloud account.",
+      "network": "Home Wi-Fi.",
+      "current_methods": "LocalSend, KDE Connect, or scp from a terminal."
+    },
+    "grace": {
+      "who": "Grace, 45, office manager at a 10-person accounting firm. Staff use Windows PCs and company iPhones. An outside IT contractor manages the PCs.",
+      "task": "Get scanned contracts and phone photos of receipts from staff phones onto office PCs every day.",
+      "network": "Office Wi-Fi; visitors use a guest network.",
+      "current_methods": "Staff email attachments to themselves, which bounce when files are large."
+    },
+    "kenji": {
+      "who": "Kenji, 20, university student. Uses an Android phone, a Windows laptop and an iPad.",
+      "task": "Share lecture recordings, slides and notes between his own devices and with classmates sitting next to him.",
+      "network": "Campus Wi-Fi, which usually blocks devices from seeing each other, and his phone hotspot.",
+      "current_methods": "Google Drive and Discord."
+    },
+    "linda": {
+      "who": "Linda, 66, retired teacher with low confidence in technology. Uses an iPad, an iPhone and an old Windows desktop.",
+      "task": "Copy videos of her grandchildren from her iPhone to the Windows desktop to keep them safe.",
+      "network": "Home Wi-Fi set up by her son.",
+      "current_methods": "Emailing videos to herself, which fails for anything long, then asking her son for help."
+    },
+    "ravi": {
+      "who": "Ravi, 38, travel photographer. Uses an Android phone and a MacBook Pro.",
+      "task": "Move 10 to 30 GB of RAW photos and drone videos from his phone to his laptop while travelling.",
+      "network": "Hotel Wi-Fi that isolates guests, or no internet at all, so he uses his phone hotspot.",
+      "current_methods": "USB-C cable with Android File Transfer, which often disconnects mid-copy."
+    }
+  },
+  "features": {
+    "platforms": {
+      "label": "Native apps on all five platforms",
+      "launch": "Native apps for iPhone/iPad, Android, macOS, Windows and Linux from the usual app stores and website. Installers are about 10 MB.",
+      "current": "Desktop apps for macOS and Windows (135 MB installers) and an Android app. iPhone and iPad only work through a web page that first requires installing a security certificate profile in iOS Settings."
+    },
+    "signed": {
+      "label": "Signed, notarized installers",
+      "launch": "Installers are signed and notarized, so macOS and Windows open them without warnings.",
+      "current": "Installers are unsigned: macOS says it cannot check the app for malicious software and Windows shows \"Windows protected your PC\"; the user has to find the hidden way to open it anyway."
+    },
+    "pairing": {
+      "label": "Tap a nearby device and compare a 6-digit code",
+      "launch": "To connect two devices the first time, tap the other device in the Nearby list, then check that both screens show the same 6-digit number and press Accept on the other device.",
+      "current": "To connect two devices, open \"Pair a device\" on the receiver, type its 30-character code on the sender (or paste a long invitation link), approve on the receiver, then press \"Confirm connection\" on the sender."
+    },
+    "remembered": {
+      "label": "Devices stay paired after restarts",
+      "launch": "Once connected, the two devices stay paired, including after closing the app or restarting; next time they just appear as ready.",
+      "current": "A pairing is forgotten when either app closes and after 24 hours; the user pairs again each time."
+    },
+    "two_way": {
+      "label": "One pairing works in both directions",
+      "launch": "One pairing lets either device send to the other.",
+      "current": "A pairing only works in one direction; to send back, the user pairs again from the other device."
+    },
+    "auto_accept": {
+      "label": "Optional auto-accept from your own devices",
+      "launch": "Files from your own paired devices can arrive automatically (a setting, on by default for devices you mark as yours); from anyone else you approve the file list first.",
+      "current": "The receiver must review and approve every incoming file list, even from their own devices."
+    },
+    "save_location": {
+      "label": "Files land in Downloads / Files / Photos",
+      "launch": "Received files go straight to the Downloads folder on computers, the Files app on iPhone and the Downloads folder on Android, with a \"Show in folder\" button; photos and videos can be saved to the photo library in one tap.",
+      "current": "Received files are kept in a hidden app data folder with a long random name; on phones each file has to be exported one at a time through a save dialog."
+    },
+    "share_sheet": {
+      "label": "Send from the share sheet",
+      "launch": "On phones, Drift appears in the Share menu of Photos, Files and other apps, and on computers files can be dropped on the window or tray icon.",
+      "current": "Files can only be chosen from inside the Drift app with its own file picker."
+    },
+    "background": {
+      "label": "Receives in the background on computers",
+      "launch": "On computers Drift keeps running in the menu bar or system tray, so a computer can receive while its window is closed.",
+      "current": "Drift only receives while its window is open."
+    },
+    "qr_scan": {
+      "label": "Camera QR scanning",
+      "launch": "If a device does not appear in the Nearby list, scan a QR code on the other screen with the phone camera.",
+      "current": "If a device does not appear in the Nearby list, the user types an IP address, a port number and the 30-character code."
+    },
+    "updates": {
+      "label": "Automatic updates",
+      "launch": "The app updates itself securely in the background.",
+      "current": "Each new version must be downloaded and installed by hand."
+    }
+  },
+  "common": {
+    "network": "Works between devices on the same Wi-Fi network or phone hotspot. It does not send over the internet.",
+    "security": "End-to-end encrypted, files are checked for corruption on arrival, and interrupted transfers resume.",
+    "speed": "Usually several times faster than cloud upload and download because files go directly over the local network.",
+    "price": "Free, with no account or sign-up."
+  },
+  "internetFeature": "If the devices are not on the same network, Drift sends through an encrypted relay over the internet instead, more slowly.",
+  "adoptionQuestions": {
+    "completes_first_transfer": {
+      "type": "noul",
+      "instructions": "Read `persona` and `product`. Using only the product exactly as described, would this person get through installing it on both devices, connecting them, and finishing their first transfer for `persona.task` on `persona.network`, without giving up and going back to `persona.current_methods`?"
+    },
+    "keeps_using": {
+      "type": "noul",
+      "instructions": "Read `persona` and `product`. Suppose this person did finish one transfer with the product exactly as described. One month later, would they still be choosing it for `persona.task`, instead of `persona.current_methods`?"
+    }
+  },
+  "designQuestions": {
+    "pairing_method": {
+      "instructions": "Which way of connecting two devices for the first time would this person be most likely to complete correctly on the first try, without help?",
+      "criteria": {
+        "tap_and_compare": "Tap the other device in a Nearby list, check both screens show the same 6-digit number, and press Accept.",
+        "scan_qr": "Point the phone camera at a QR code shown on the other screen.",
+        "type_short_code": "Type a 6-digit code shown on the other screen.",
+        "paste_link": "Copy a long invitation link on one device and paste it on the other.",
+        "type_long_code": "Type a 30-character code plus an IP address and port."
+      }
+    },
+    "receive_policy": {
+      "instructions": "Which rule for incoming files would this person want for files sent from their own devices?",
+      "criteria": {
+        "auto_accept_own": "Files from devices they have marked as their own arrive automatically; files from anyone else need approval.",
+        "ask_every_time": "Show the file list and ask them to approve every transfer, even from their own devices.",
+        "accept_anyone": "Accept files from any device on the network automatically."
+      }
+    },
+    "save_location": {
+      "instructions": "Where would this person want files they receive from their own devices to be saved, so they can find and use them afterwards?",
+      "criteria": {
+        "downloads": "The normal Downloads folder (Files app on iPhone), with a button to show the file.",
+        "photo_library": "Photos and videos in the phone or computer photo library; other files in Downloads.",
+        "ask_each_time": "A save dialog asking where to put each transfer.",
+        "app_folder": "A folder inside the app that they open from the app."
+      }
+    }
+  },
+  "diagnosisQuestions": {
+    "deal_breaker": {
+      "instructions": "If this person stopped using the current preview described in `current_preview`, which single problem would most likely be the reason?",
+      "criteria": {
+        "install_warnings": "Security warnings when installing on macOS or Windows.",
+        "no_iphone_app": "No real iPhone/iPad app; the certificate-profile web page.",
+        "pairing_effort": "Typing long codes and the approve-then-confirm steps.",
+        "repairing": "Having to pair again after closing the app, and pairing separately for each direction.",
+        "hidden_files": "Received files hidden in an app folder or exported one at a time.",
+        "network_blocked": "Devices cannot see each other on their Wi-Fi.",
+        "no_internet_mode": "Cannot send when the devices are on different networks."
+      }
+    }
+  },
+  "contextQuestions": {
+    "needs_internet_often": {
+      "type": "noul",
+      "instructions": "For `persona.task`, would this person often need to send between devices that are not on the same Wi-Fi network or hotspot?"
+    },
+    "network_likely_blocks_lan": {
+      "type": "noul",
+      "instructions": "Is `persona.network` likely to stop two devices on it from discovering or connecting to each other directly?"
+    },
+    "expects_background_on_phone": {
+      "type": "noul",
+      "instructions": "Would this person expect a long transfer to keep going while their phone is locked or they switch to another app?"
+    },
+    "cares_about_install_size": {
+      "type": "noul",
+      "instructions": "Would a 135 MB installer instead of a 10 MB one noticeably reduce this person's willingness to install the app?"
+    }
+  }
+}
