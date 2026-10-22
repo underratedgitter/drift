@@ -1,9 +1,10 @@
 use crate::{
     ApiResult, Offset, Shared, Upload, check, constant_eq,
-    model::{Invitation, Session, now},
-    pairing::Pairing,
+    model::{DeviceHello, Invitation, Session, TrustedDevice, capability_hash, now},
+    pairing::{Pairing, secret},
+    selection,
     storage::{safe_path, validate},
-    transport::Connection,
+    transport::{Connection, Refused},
 };
 use anyhow::{Context, Result, ensure};
 use axum::{
@@ -17,7 +18,7 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
-use std::{net::SocketAddr, path::PathBuf};
+use std::{collections::HashSet, net::SocketAddr, path::PathBuf, time::Duration};
 use tokio::io::{AsyncSeekExt, AsyncWriteExt};
 use tower_http::{services::ServeDir, set_header::SetResponseHeaderLayer};
 
@@ -71,6 +72,14 @@ pub async fn serve_embedded(
     serve_router(engine, bind, router).await
 }
 
+/// The control API without a socket, for a native shell that calls it in
+/// process. Requests still need `Authorization: Bearer <ui_token>`.
+pub fn app_router(engine: Shared) -> Router {
+    control_routes(engine.clone())
+        .layer(DefaultBodyLimit::max(crate::model::MAX_METADATA))
+        .with_state(engine)
+}
+
 fn control_routes(engine: Shared) -> Router<Shared> {
     let protected = Router::new()
         .route("/state", get(state))
@@ -88,6 +97,8 @@ fn control_routes(engine: Shared) -> Router<Shared> {
         .route("/phone/invitation", post(phone_invitation))
         .route("/phone/offer", post(phone_offer))
         .route("/native/batch", post(native_batch))
+        .route("/devices/{id}", post(update_device))
+        .route("/devices/{id}/forget", post(forget_device))
         .route_layer(middleware::from_fn_with_state(engine.clone(), authorize));
     Router::new().nest("/api", protected)
 }
@@ -138,6 +149,7 @@ async fn authorize(State(engine): State<Shared>, request: Request, next: Next) -
 }
 
 async fn state(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
+    let discovery_running = engine.discovery.lock().unwrap().is_some();
     let peers: Vec<_> = engine
         .discovery
         .lock()
@@ -145,12 +157,24 @@ async fn state(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
         .as_ref()
         .map(|d| d.peers.lock().unwrap().values().cloned().collect())
         .unwrap_or_default();
+    let nearby: HashSet<_> = peers.iter().map(|peer| peer.id.clone()).collect();
+    let devices = engine.devices.lock().unwrap().clone();
     let mut connections: Vec<_> = engine
         .connections
         .lock()
         .await
         .iter()
-        .map(|(id, c)| json!({"id":id,"name":c.name,"confirmed":c.confirmed}))
+        .map(|(id, c)| match devices.get(id) {
+            Some(device) => json!({"id":id,"name":device.name,"os":device.os,"confirmed":true,"remembered":true,"own":device.own,
+                "online": if discovery_running { Value::Bool(nearby.contains(id)) } else { Value::Null }}),
+            None => json!({"id":id,"name":c.name,"os":c.os,"confirmed":c.confirmed}),
+        })
+        .collect();
+    connections.sort_by_key(|device| device["name"].as_str().unwrap_or("").to_lowercase());
+    // Remembered devices are listed as devices, not as strangers nearby.
+    let peers: Vec<_> = peers
+        .into_iter()
+        .filter(|peer| !devices.contains_key(&peer.id))
         .collect();
     if let Some(hub) = engine.phone.lock().await.clone() {
         let ids = hub.sessions.lock().unwrap().clone();
@@ -166,11 +190,27 @@ async fn state(State(engine): State<Shared>) -> ApiResult<Json<Value>> {
         }
         pairing.invitation.clone()
     };
+    let transfers = engine.store.list()?;
+    let mut saved = serde_json::Map::new();
+    for transfer in transfers
+        .iter()
+        .filter(|t| t.direction == "receive" && t.status == "complete")
+    {
+        let paths = engine.store.saved(&transfer.id)?;
+        if !paths.is_empty() {
+            saved.insert(transfer.id.clone(), json!(paths));
+        }
+    }
+    let receive_directory = engine
+        .store
+        .inbox
+        .clone()
+        .unwrap_or_else(|| engine.store.root.join("received"));
     let discovery_error = engine.discovery_error.lock().unwrap().clone();
     let last_error = engine.last_error.lock().await.clone();
     Ok(Json(
         json!({"name":engine.name,"os":std::env::consts::OS,"invitation":invitation,"sessions":sessions,"connections":connections,
-        "transfers":engine.store.list()?,"peers":peers,"discoveryError":discovery_error,"lastError":last_error,"receiveDirectory":engine.store.root.join("received").display().to_string()}),
+        "transfers":transfers,"saved":saved,"peers":peers,"discoveryError":discovery_error,"lastError":last_error,"receiveDirectory":receive_directory.display().to_string()}),
     ))
 }
 async fn invitation(State(engine): State<Shared>) -> Json<Invitation> {
@@ -183,21 +223,113 @@ async fn pair(
     Json(invite): Json<Invitation>,
 ) -> ApiResult<Json<Value>> {
     check(
-        engine.connections.lock().await.len() < 64,
-        "Too many connections; restart Drift to clear",
+        engine.connections.lock().await.len() < 256,
+        "Too many devices; forget some in Devices first",
     )?;
-    let connection = Connection::pair(&invite, &engine.name).await?;
+    let capability = secret(32);
+    let hello = DeviceHello {
+        id: engine.fingerprint.clone(),
+        port: engine.port,
+        capability: capability.clone(),
+        os: std::env::consts::OS.into(),
+    };
+    let connection = Connection::pair_device(&invite, &engine.name, Some(hello)).await?;
+    check(
+        connection.fingerprint != engine.fingerprint,
+        "This is the same device. Pair with another one.",
+    )?;
     let id = connection.session.clone();
+    let hash = capability_hash(&capability);
+    engine.outgoing_pairs.lock().unwrap().insert(
+        hash.clone(),
+        (connection.fingerprint.clone(), connection.name.clone()),
+    );
     engine
         .connections
         .lock()
         .await
-        .insert(id.clone(), connection);
+        .insert(id.clone(), connection.clone());
+    tokio::spawn(complete_pairing(
+        engine,
+        connection,
+        hash,
+        invite.host,
+        invite.port,
+    ));
     Ok(Json(json!({"id":id})))
+}
+
+/// Waits for the other device's approval, then remembers it. There is no
+/// separate confirmation step here: starting the pairing was the consent.
+async fn complete_pairing(
+    engine: Shared,
+    connection: Connection,
+    incoming: String,
+    host: String,
+    port: u16,
+) {
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(600);
+    let outcome = loop {
+        tokio::time::sleep(Duration::from_millis(500)).await;
+        if !engine
+            .connections
+            .lock()
+            .await
+            .contains_key(&connection.session)
+        {
+            break None;
+        }
+        if tokio::time::Instant::now() >= deadline {
+            break Some(format!(
+                "{} did not approve the connection in time. Pair again.",
+                connection.name
+            ));
+        }
+        match connection.get::<Session>("/session").await {
+            Ok(session) if session.approved => {
+                if !session.confirmed
+                    && let Err(error) = connection.post::<_, Session>("/confirm", &()).await
+                {
+                    eprintln!("Pairing confirmation will be retried: {error}");
+                    continue;
+                }
+                let device = TrustedDevice {
+                    id: connection.fingerprint.clone(),
+                    name: connection.name.clone(),
+                    os: connection.os.clone(),
+                    host: host.clone(),
+                    port,
+                    outgoing: connection.capability().to_owned(),
+                    incoming: incoming.clone(),
+                    own: true,
+                    added: now(),
+                };
+                engine.connections.lock().await.remove(&connection.session);
+                break match engine.trust(device).await {
+                    Ok(()) => None,
+                    Err(error) => Some(format!("Could not remember {}: {error}", connection.name)),
+                };
+            }
+            Ok(_) => {}
+            Err(error) if error.downcast_ref::<Refused>().is_some() => {
+                break Some(format!("{} declined the connection.", connection.name));
+            }
+            // Unreachable for a moment (Wi-Fi roaming, sleep): keep waiting.
+            Err(_) => {}
+        }
+    };
+    engine.connections.lock().await.remove(&connection.session);
+    engine.outgoing_pairs.lock().unwrap().remove(&incoming);
+    if let Some(message) = outcome {
+        *engine.last_error.lock().await = Some(message);
+    }
 }
 #[derive(Deserialize)]
 struct Decision {
     approve: bool,
+    /// For a device that can be remembered: accept its files without asking.
+    #[serde(default)]
+    own: Option<bool>,
 }
 async fn approve_session(
     State(engine): State<Shared>,
@@ -205,11 +337,73 @@ async fn approve_session(
     Json(decision): Json<Decision>,
 ) -> ApiResult<Json<Value>> {
     let mut sessions = engine.sessions.lock().await;
-    if decision.approve {
-        sessions.get_mut(&id).context("Session not found")?.approved = true;
-    } else {
+    if !decision.approve {
         sessions.remove(&id);
         engine.owners.lock().await.retain(|_, owner| owner != &id);
+        return Ok(Json(json!({"ok":true})));
+    }
+    let session = sessions.get_mut(&id).context("Session not found")?;
+    let Some((hello, host)) = session.device.clone() else {
+        session.approved = true;
+        return Ok(Json(json!({"ok":true})));
+    };
+    // A device that introduced itself is remembered in both directions; its
+    // capability now lives in the device list instead of this session.
+    let device = TrustedDevice {
+        id: hello.id,
+        name: session.name.clone(),
+        os: hello.os,
+        host,
+        port: hello.port,
+        outgoing: hello.capability,
+        incoming: capability_hash(&session.capability),
+        own: decision.own.unwrap_or(true),
+        added: now(),
+    };
+    sessions.remove(&id);
+    drop(sessions);
+    engine.trust(device).await?;
+    Ok(Json(json!({"ok":true})))
+}
+
+#[derive(Deserialize)]
+struct DeviceUpdate {
+    own: bool,
+}
+async fn update_device(
+    State(engine): State<Shared>,
+    Path(id): Path<String>,
+    Json(update): Json<DeviceUpdate>,
+) -> ApiResult<Json<Value>> {
+    let device = {
+        let mut devices = engine.devices.lock().unwrap();
+        let device = devices.get_mut(&id).context("Device not found")?;
+        device.own = update.own;
+        device.clone()
+    };
+    engine.store.save_device(&device)?;
+    Ok(Json(json!({"ok":true})))
+}
+
+async fn forget_device(
+    State(engine): State<Shared>,
+    Path(id): Path<String>,
+) -> ApiResult<Json<Value>> {
+    let connection = engine.connections.lock().await.get(&id).cloned();
+    check(
+        engine.devices.lock().unwrap().contains_key(&id) || connection.is_some(),
+        "Device not found",
+    )?;
+    engine.forget(&id).await?;
+    // Tell the other device too, if it is reachable; it forgets us on its side.
+    if let Some(connection) = connection {
+        tokio::spawn(async move {
+            let _ = tokio::time::timeout(
+                Duration::from_secs(10),
+                connection.post::<_, Value>("/forget", &()),
+            )
+            .await;
+        });
     }
     Ok(Json(json!({"ok":true})))
 }
@@ -405,15 +599,10 @@ async fn phone_offer(
     Ok(Json(json!({"id":id})))
 }
 
-#[derive(Deserialize)]
-struct NativeFile {
-    path: String,
-    source: PathBuf,
-}
 async fn native_batch(
     State(engine): State<Shared>,
     headers: HeaderMap,
-    Json(files): Json<Vec<NativeFile>>,
+    Json(files): Json<Vec<selection::Source>>,
 ) -> ApiResult<Json<Value>> {
     let token = headers
         .get("x-drift-native")
@@ -426,44 +615,5 @@ async fn native_batch(
             .is_some_and(|expected| constant_eq(expected, token)),
         "Native file selection requires the desktop app",
     )?;
-    check(
-        !files.is_empty() && files.len() <= crate::model::MAX_FILES,
-        "Choose between 1 and 10,000 files",
-    )?;
-    let mut uploads = Vec::new();
-    let mut sources = Vec::new();
-    for file in files {
-        let metadata = tokio::fs::symlink_metadata(&file.source).await?;
-        check(
-            file.source.is_absolute() && metadata.is_file() && !metadata.file_type().is_symlink(),
-            "Choose regular files, not symlinks",
-        )?;
-        uploads.push(Upload {
-            path: file.path,
-            size: metadata.len(),
-        });
-        sources.push(file.source);
-    }
-    let entries: Vec<_> = uploads
-        .iter()
-        .map(|upload| crate::model::Entry {
-            path: upload.path.clone(),
-            size: upload.size,
-            blake3: "0".repeat(64),
-        })
-        .collect();
-    validate(&entries)?;
-    let mut batches = engine.uploads.lock().await;
-    check(
-        batches.len() < 100,
-        "Too many selected batches; restart Drift to clear them",
-    )?;
-    let id = uuid::Uuid::new_v4().to_string();
-    engine
-        .native_sources
-        .lock()
-        .await
-        .insert(id.clone(), sources);
-    batches.insert(id.clone(), uploads.clone());
-    Ok(Json(json!({"id":id,"files":uploads})))
+    Ok(Json(json!(selection::select(&engine, files).await?)))
 }

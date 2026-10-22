@@ -69,6 +69,7 @@ fn pairing_expiry_replay_and_certificate_binding() {
         nonce: nonce.clone(),
         name: "Laptop".into(),
         proof: proof(&code, "client", "certificate-A", &nonce, "Laptop"),
+        device: None,
     };
     pairing.consume("certificate-A", &request).unwrap();
     assert!(pairing.consume("certificate-A", &request).is_err());

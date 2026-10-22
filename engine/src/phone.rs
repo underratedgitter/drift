@@ -310,6 +310,7 @@ async fn enroll(
             confirmed: false,
             created: now(),
             capability: capability.clone(),
+            device: None,
         },
     );
     hub.sessions.lock().unwrap().insert(id.clone());

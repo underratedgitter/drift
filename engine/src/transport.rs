@@ -1,12 +1,17 @@
 use crate::{
-    model::{Invitation, PairRequest},
+    model::{DeviceHello, Invitation, PairRequest, TrustedDevice},
     pairing::{proof, secret, verify},
 };
 use anyhow::{Context, Result, ensure};
-use reqwest::{Certificate, Client, Response};
+use reqwest::{Client, Response};
+use rustls::{
+    DigitallySignedStruct, SignatureScheme,
+    client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier},
+    crypto::CryptoProvider,
+    pki_types::{CertificateDer, ServerName, UnixTime},
+};
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
-use sha2::{Digest, Sha256};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 #[derive(Clone)]
 pub struct Connection {
@@ -14,7 +19,10 @@ pub struct Connection {
     base: String,
     pub session: String,
     pub name: String,
+    pub os: String,
     pub confirmed: bool,
+    /// The peer's certificate fingerprint: its identity on every later connection.
+    pub fingerprint: String,
     capability: String,
 }
 
@@ -23,6 +31,8 @@ pub struct PairReply {
     pub session: String,
     pub capability: String,
     pub name: String,
+    #[serde(default)]
+    pub os: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -30,14 +40,123 @@ pub struct ProofReply {
     pub proof: String,
 }
 
+/// Accepts exactly one certificate, by SHA-256 fingerprint, and still verifies
+/// the handshake signature with it. Peers are addressed by changing LAN IPs, so
+/// a hostname check would break remembered devices without adding security.
+#[derive(Debug)]
+struct Pinned {
+    fingerprint: String,
+    provider: Arc<CryptoProvider>,
+}
+
+impl ServerCertVerifier for Pinned {
+    fn verify_server_cert(
+        &self,
+        end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> std::result::Result<ServerCertVerified, rustls::Error> {
+        if crate::constant_eq(
+            &crate::identity::fingerprint(end_entity.as_ref()),
+            &self.fingerprint,
+        ) {
+            Ok(ServerCertVerified::assertion())
+        } else {
+            Err(rustls::Error::InvalidCertificate(
+                rustls::CertificateError::ApplicationVerificationFailure,
+            ))
+        }
+    }
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> std::result::Result<HandshakeSignatureValid, rustls::Error> {
+        rustls::crypto::verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.provider.signature_verification_algorithms,
+        )
+    }
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        self.provider
+            .signature_verification_algorithms
+            .supported_schemes()
+    }
+}
+
+pub(crate) fn pinned_client(fingerprint: &str, timeout: Duration) -> Result<Client> {
+    ensure!(
+        fingerprint.len() == 64 && hex::decode(fingerprint).is_ok(),
+        "Invalid device fingerprint"
+    );
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let tls = rustls::ClientConfig::builder_with_provider(provider.clone())
+        .with_safe_default_protocol_versions()?
+        .dangerous()
+        .with_custom_certificate_verifier(Arc::new(Pinned {
+            fingerprint: fingerprint.to_owned(),
+            provider,
+        }))
+        .with_no_client_auth();
+    Ok(Client::builder()
+        .use_preconfigured_tls(tls)
+        .redirect(reqwest::redirect::Policy::none())
+        .no_proxy()
+        .timeout(timeout)
+        .build()?)
+}
+
+fn lan_host(host: &str) -> Result<()> {
+    let ip: std::net::Ipv4Addr = host
+        .parse()
+        .context("Use the device's local IPv4 address")?;
+    ensure!(
+        ip.is_private() || ip.is_loopback() || ip.is_link_local(),
+        "LAN mode accepts local addresses only"
+    );
+    Ok(())
+}
+
+/// The peer answered and refused, as opposed to being unreachable.
+#[derive(Debug)]
+pub struct Refused {
+    pub status: reqwest::StatusCode,
+    pub message: String,
+}
+impl std::fmt::Display for Refused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Peer returned {}: {}", self.status, self.message)
+    }
+}
+impl std::error::Error for Refused {}
+
 async fn checked(response: Response) -> Result<Response> {
     if !response.status().is_success() {
         let status = response.status();
         let bytes = bounded_body(response).await?;
-        anyhow::bail!(
-            "Peer returned {status}: {}",
-            String::from_utf8_lossy(&bytes[..bytes.len().min(500)])
-        );
+        return Err(Refused {
+            status,
+            message: String::from_utf8_lossy(&bytes[..bytes.len().min(500)]).into_owned(),
+        }
+        .into());
     }
     Ok(response)
 }
@@ -90,7 +209,18 @@ impl Connection {
         })
     }
 
+    /// Pairs without offering this device's identity (one-way, session-only).
     pub async fn pair(invitation: &Invitation, name: &str) -> Result<Self> {
+        Self::pair_device(invitation, name, None).await
+    }
+
+    /// Pairs and, with `hello`, lets the other device remember this one and send
+    /// back to it after approval.
+    pub async fn pair_device(
+        invitation: &Invitation,
+        name: &str,
+        hello: Option<DeviceHello>,
+    ) -> Result<Self> {
         ensure!(
             invitation.version == 1 && invitation.port > 0,
             "Unsupported invitation"
@@ -99,14 +229,7 @@ impl Connection {
             invitation.code.len() == 30 && hex::decode(&invitation.code).is_ok(),
             "Pairing code must contain 30 hexadecimal characters"
         );
-        let ip: std::net::Ipv4Addr = invitation
-            .host
-            .parse()
-            .context("Use the device's local IPv4 address")?;
-        ensure!(
-            ip.is_private() || ip.is_loopback() || ip.is_link_local(),
-            "LAN mode accepts local addresses only"
-        );
+        lan_host(&invitation.host)?;
         let base = format!("https://{}:{}", invitation.host, invitation.port);
         let bootstrap = Client::builder()
             .danger_accept_invalid_certs(true)
@@ -129,7 +252,7 @@ impl Connection {
             .and_then(|i| i.peer_certificate())
             .context("TLS certificate missing")?
             .to_vec();
-        let fingerprint = hex::encode(Sha256::digest(&der));
+        let fingerprint = crate::identity::fingerprint(&der);
         let reply: ProofReply = decode(response).await?;
         verify(
             &invitation.code,
@@ -141,17 +264,12 @@ impl Connection {
         )
         .context("Pairing authentication failed. Check the code and device address.")?;
         // From here onward, only this authenticated certificate is trusted.
-        let client = Client::builder()
-            .tls_built_in_root_certs(false)
-            .add_root_certificate(Certificate::from_der(&der)?)
-            .redirect(reqwest::redirect::Policy::none())
-            .no_proxy()
-            .timeout(Duration::from_secs(30))
-            .build()?;
+        let client = pinned_client(&fingerprint, Duration::from_secs(30))?;
         let request = PairRequest {
             nonce: nonce.clone(),
             name: name.to_owned(),
             proof: proof(&invitation.code, "client", &fingerprint, &nonce, name),
+            device: hello,
         };
         let reply: PairReply = decode(
             client
@@ -167,8 +285,41 @@ impl Connection {
             session: reply.session,
             capability: reply.capability,
             name: reply.name,
+            os: reply.os,
             confirmed: false,
+            fingerprint,
         })
+    }
+
+    /// Reconnects to a remembered device at its last known address.
+    pub fn restore(device: &TrustedDevice) -> Result<Self> {
+        lan_host(&device.host)?;
+        Ok(Self {
+            client: pinned_client(&device.id, Duration::from_secs(30))?,
+            base: format!("https://{}:{}", device.host, device.port),
+            session: device.id.clone(),
+            name: device.name.clone(),
+            os: device.os.clone(),
+            confirmed: true,
+            fingerprint: device.id.clone(),
+            capability: device.outgoing.clone(),
+        })
+    }
+
+    /// Follows a remembered device to a new address. The pinned identity is
+    /// unchanged, so a wrong address can only fail, never impersonate.
+    pub fn moved(&mut self, host: &str, port: u16) -> Result<()> {
+        lan_host(host)?;
+        self.base = format!("https://{host}:{port}");
+        Ok(())
+    }
+
+    pub fn address(&self) -> &str {
+        self.base.trim_start_matches("https://")
+    }
+
+    pub(crate) fn capability(&self) -> &str {
+        &self.capability
     }
 
     pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T> {
@@ -294,7 +445,9 @@ mod tests {
                 base: format!("http://{address}"),
                 session: String::new(),
                 name: "test".into(),
+                os: String::new(),
                 confirmed: true,
+                fingerprint: "0".repeat(64),
                 capability: "test-only".into(),
             };
             let result = connection.window_size().await;

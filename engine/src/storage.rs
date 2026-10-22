@@ -1,4 +1,4 @@
-use crate::model::{CHUNK, Entry, MAX_FILES, Transfer};
+use crate::model::{CHUNK, Entry, MAX_FILES, Transfer, TrustedDevice};
 use anyhow::{Context, Result, ensure};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::{
@@ -9,6 +9,10 @@ use std::{
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
 const RECORDS: TableDefinition<&str, &str> = TableDefinition::new("transfers");
+const DEVICES: TableDefinition<&str, &str> = TableDefinition::new("devices");
+// Where each received transfer's top-level items were saved, keyed by transfer
+// ID. Kept apart from Transfer records because those are also sent to peers.
+const DELIVERIES: TableDefinition<&str, &str> = TableDefinition::new("deliveries");
 
 /// How often receive progress is committed to the history database. File bytes
 /// are synced before their offset advances, so after a crash the recorded offset
@@ -22,6 +26,9 @@ type Live = std::collections::HashMap<String, (Transfer, std::time::Instant)>;
 #[derive(Clone)]
 pub struct Store {
     pub root: PathBuf,
+    /// Visible folder that verified received files are moved into, such as
+    /// Downloads/Drift. Without one they stay under `root/received/<id>`.
+    pub inbox: Option<PathBuf>,
     db: Arc<Database>,
     // Receive progress newer than its last database commit (see PROGRESS_COMMIT).
     live: Arc<std::sync::Mutex<Live>>,
@@ -160,10 +167,13 @@ impl Store {
         let tx = db.begin_write()?;
         {
             tx.open_table(RECORDS)?;
+            tx.open_table(DEVICES)?;
+            tx.open_table(DELIVERIES)?;
         }
         tx.commit()?;
         let store = Self {
             root,
+            inbox: None,
             db: Arc::new(db),
             live: Arc::default(),
         };
@@ -272,14 +282,80 @@ impl Store {
         Ok(serde_json::from_str(value.value())?)
     }
 
+    pub fn devices(&self) -> Result<Vec<TrustedDevice>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(DEVICES)?;
+        let mut devices = Vec::new();
+        for row in table.iter()? {
+            devices.push(serde_json::from_str(row?.1.value())?);
+        }
+        Ok(devices)
+    }
+
+    pub fn save_device(&self, device: &TrustedDevice) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            tx.open_table(DEVICES)?
+                .insert(device.id.as_str(), serde_json::to_string(device)?.as_str())?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn remove_device(&self, id: &str) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            tx.open_table(DEVICES)?.remove(id)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Absolute paths of the saved top-level files and folders of a delivered
+    /// transfer, in manifest order.
+    pub fn saved(&self, id: &str) -> Result<Vec<String>> {
+        Ok(self
+            .delivery_plan(id)?
+            .into_iter()
+            .map(|(_, path)| path)
+            .collect())
+    }
+
+    fn delivery_plan(&self, id: &str) -> Result<Vec<(String, String)>> {
+        let tx = self.db.begin_read()?;
+        let table = tx.open_table(DELIVERIES)?;
+        Ok(match table.get(id)? {
+            Some(value) => serde_json::from_str(value.value())?,
+            None => Vec::new(),
+        })
+    }
+
+    fn save_delivery_plan(&self, id: &str, plan: &[(String, String)]) -> Result<()> {
+        let tx = self.db.begin_write()?;
+        {
+            tx.open_table(DELIVERIES)?
+                .insert(id, serde_json::to_string(plan)?.as_str())?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn clear_history(&self) -> Result<()> {
         let tx = self.db.begin_write()?;
         {
-            tx.open_table(RECORDS)?.retain(|_, value| {
+            let mut records = tx.open_table(RECORDS)?;
+            records.retain(|_, value| {
                 serde_json::from_str::<Transfer>(value)
                     .map(|t| t.status != "complete" && t.status != "cancelled")
                     .unwrap_or(true)
             })?;
+            let mut kept = HashSet::new();
+            for row in records.iter()? {
+                kept.insert(row?.0.value().to_owned());
+            }
+            // Saved files stay where they are; only the record of them goes.
+            tx.open_table(DELIVERIES)?
+                .retain(|id, _| kept.contains(id))?;
         }
         tx.commit()?;
         Ok(())
@@ -364,6 +440,14 @@ impl Store {
     pub async fn finish(&self, transfer: &mut Transfer) -> Result<()> {
         ensure!(transfer.status == "receiving", "Transfer is not receiving");
         let destination = self.root.join("received").join(&transfer.id);
+        // A delivery that started before a crash or restart: finish moving it.
+        if destination.exists() && !self.delivery_plan(&transfer.id)?.is_empty() {
+            self.deliver(transfer).await?;
+            transfer.offsets = transfer.entries.iter().map(|entry| entry.size).collect();
+            transfer.status = "complete".into();
+            transfer.updated = crate::model::now();
+            return self.save(transfer);
+        }
         // History can be cleared independently of received files, or the process
         // can stop after publication but before the completion metadata commits.
         // Verify immutable published files rather than touching their hard links.
@@ -376,6 +460,9 @@ impl Store {
                     "Destination conflict: {}",
                     entry.path
                 );
+            }
+            if self.inbox.is_some() {
+                self.deliver(transfer).await?;
             }
             transfer.offsets = transfer.entries.iter().map(|entry| entry.size).collect();
             transfer.status = "complete".into();
@@ -449,6 +536,9 @@ impl Store {
             .await?
             .sync_data()
             .await?;
+        if self.inbox.is_some() {
+            self.deliver(transfer).await?;
+        }
         transfer.status = "complete".into();
         transfer.updated = crate::model::now();
         self.save(transfer)?;
@@ -465,5 +555,196 @@ impl Store {
             );
         }
         Ok(())
+    }
+}
+
+/// Top-level items of a manifest in order: each is a file, or a folder whose
+/// entries all start with "name/".
+fn top_level(entries: &[Entry]) -> Vec<(String, bool)> {
+    let mut items: Vec<(String, bool)> = Vec::new();
+    for entry in entries {
+        let (name, folder) = match entry.path.split_once('/') {
+            Some((name, _)) => (name, true),
+            None => (entry.path.as_str(), false),
+        };
+        if !items.iter().any(|(existing, _)| existing == name) {
+            items.push((name.to_owned(), folder));
+        }
+    }
+    items
+}
+
+/// "name", then "name (2)", "name (3)"… keeping a file's extension last.
+fn candidate(name: &str, folder: bool, n: u32) -> String {
+    if n == 1 {
+        return name.to_owned();
+    }
+    match name.rsplit_once('.') {
+        Some((stem, extension)) if !folder && !stem.is_empty() => {
+            format!("{stem} ({n}).{extension}")
+        }
+        _ => format!("{name} ({n})"),
+    }
+}
+
+fn free_name(
+    inbox: &Path,
+    name: &str,
+    folder: bool,
+    taken: &[(String, String)],
+) -> Result<PathBuf> {
+    for n in 1..=1000 {
+        let path = inbox.join(candidate(name, folder, n));
+        let planned = taken
+            .iter()
+            .any(|(_, existing)| Path::new(existing) == path);
+        if !planned && std::fs::symlink_metadata(&path).is_err() {
+            return Ok(path);
+        }
+    }
+    anyhow::bail!("Too many files named {name} in {}", inbox.display())
+}
+
+/// Never replaces an existing file: hard links fail if the target exists, and
+/// the copy fallback (other volume, Android) opens with create_new.
+async fn link_or_copy(source: &Path, target: &Path) -> std::io::Result<()> {
+    match tokio::fs::hard_link(source, target).await {
+        Err(error) if error.kind() != std::io::ErrorKind::AlreadyExists => {
+            let mut input = tokio::fs::File::open(source).await?;
+            let mut output = tokio::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(target)
+                .await?;
+            let copied = async {
+                tokio::io::copy(&mut input, &mut output).await?;
+                output.sync_all().await
+            }
+            .await;
+            if copied.is_err() {
+                drop(output);
+                let _ = tokio::fs::remove_file(target).await;
+            }
+            copied
+        }
+        result => result,
+    }
+}
+
+impl Store {
+    /// Moves a verified, published transfer from `received/<id>` into the inbox
+    /// under readable names, without overwriting anything already there. The
+    /// chosen names are committed before any file moves, so an interrupted
+    /// delivery resumes into the same names. `received/<id>` stays behind empty
+    /// as the marker that this manifest was already received.
+    async fn deliver(&self, transfer: &Transfer) -> Result<()> {
+        let inbox = self
+            .inbox
+            .clone()
+            .context("No receive folder is configured")?;
+        tokio::fs::create_dir_all(&inbox)
+            .await
+            .with_context(|| format!("Could not create the receive folder {}", inbox.display()))?;
+        let published = self.root.join("received").join(&transfer.id);
+        let mut plan = self.delivery_plan(&transfer.id)?;
+        if plan.is_empty() {
+            for (name, folder) in top_level(&transfer.entries) {
+                let path = free_name(&inbox, &name, folder, &plan)?;
+                plan.push((name, path.display().to_string()));
+            }
+            self.save_delivery_plan(&transfer.id, &plan)?;
+        }
+        for entry in &transfer.entries {
+            let (name, rest) = match entry.path.split_once('/') {
+                Some((name, rest)) => (name, Some(rest)),
+                None => (entry.path.as_str(), None),
+            };
+            let root = &plan
+                .iter()
+                .find(|(planned, _)| planned == name)
+                .context("Delivery plan does not match the manifest")?
+                .1;
+            let target = match rest {
+                Some(rest) => Path::new(root).join(rest),
+                None => PathBuf::from(root),
+            };
+            let source = published.join(&entry.path);
+            if !source.exists() {
+                // Moved before an interruption; the delivered copy must be intact.
+                ensure!(
+                    tokio::fs::metadata(&target).await.map(|m| m.len()).ok() == Some(entry.size),
+                    "A received file was removed before it could be saved: {}",
+                    entry.path
+                );
+                continue;
+            }
+            if let Some(parent) = target.parent() {
+                tokio::fs::create_dir_all(parent).await?;
+            }
+            match link_or_copy(&source, &target).await {
+                Ok(()) => {}
+                // Same bytes already there: an earlier attempt got this far.
+                Err(error)
+                    if error.kind() == std::io::ErrorKind::AlreadyExists
+                        && tokio::fs::metadata(&target).await?.len() == entry.size
+                        && hash_file(&target).await? == entry.blake3 => {}
+                Err(error) => {
+                    return Err(error).with_context(|| {
+                        format!("Could not save {} to {}", entry.path, target.display())
+                    });
+                }
+            }
+            tokio::fs::remove_file(&source).await?;
+        }
+        // Only empty directories remain; keep the marker directory itself.
+        let mut children = tokio::fs::read_dir(&published).await?;
+        while let Some(child) = children.next_entry().await? {
+            tokio::fs::remove_dir_all(child.path()).await?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn readable_names_keep_extensions_and_skip_existing_files() {
+        assert_eq!(candidate("photo.jpg", false, 1), "photo.jpg");
+        assert_eq!(candidate("photo.jpg", false, 2), "photo (2).jpg");
+        assert_eq!(candidate("archive.tar.gz", false, 3), "archive.tar (3).gz");
+        assert_eq!(candidate(".env", false, 2), ".env (2)");
+        assert_eq!(candidate("Trip.2026", true, 2), "Trip.2026 (2)");
+        let inbox = tempfile::tempdir().unwrap();
+        std::fs::write(inbox.path().join("a.txt"), b"mine").unwrap();
+        let taken = vec![(
+            "b.txt".to_owned(),
+            inbox.path().join("a (2).txt").display().to_string(),
+        )];
+        assert_eq!(
+            free_name(inbox.path(), "a.txt", false, &taken).unwrap(),
+            inbox.path().join("a (3).txt")
+        );
+        assert_eq!(
+            top_level(&[
+                Entry {
+                    path: "Trip/a.jpg".into(),
+                    size: 0,
+                    blake3: String::new()
+                },
+                Entry {
+                    path: "notes.txt".into(),
+                    size: 0,
+                    blake3: String::new()
+                },
+                Entry {
+                    path: "Trip/b/c.jpg".into(),
+                    size: 0,
+                    blake3: String::new()
+                },
+            ]),
+            vec![("Trip".to_owned(), true), ("notes.txt".to_owned(), false)]
+        );
     }
 }

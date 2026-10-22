@@ -1,9 +1,11 @@
 pub mod discovery;
+pub mod identity;
 pub mod model;
 pub mod network;
 pub mod pairing;
 pub mod phone;
 mod pipeline;
+pub mod selection;
 pub mod storage;
 pub mod transport;
 pub mod web;
@@ -12,14 +14,18 @@ use anyhow::{Context, Result, ensure};
 use axum::{
     Json, Router,
     body::Bytes,
-    extract::{DefaultBodyLimit, Path, Query, State},
+    extract::{ConnectInfo, DefaultBodyLimit, Path, Query, Request, State},
     http::{HeaderMap, StatusCode},
+    middleware::{self, Next},
+    response::Response,
     routing::{get, post, put},
 };
-use model::{Entry, PairRequest, Session, Transfer, manifest_id, now};
+use model::{
+    Entry, PairRequest, Session, Transfer, TrustedDevice, capability_hash, manifest_id, now,
+};
 use pairing::{Pairing, secret};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc};
 use storage::{Store, hash_file, validate};
 use tokio::sync::Mutex;
@@ -50,6 +56,13 @@ impl axum::response::IntoResponse for ApiError {
 pub struct Engine {
     pub name: String,
     pub fingerprint: String,
+    /// The TLS listener port, told to devices that pair with this one.
+    pub port: u16,
+    /// Paired devices remembered across restarts, by certificate fingerprint.
+    pub devices: std::sync::Mutex<HashMap<String, TrustedDevice>>,
+    /// Devices this one started pairing with, by the hash of the capability
+    /// they will present, until the other side approves or declines.
+    pub outgoing_pairs: std::sync::Mutex<HashMap<String, (String, String)>>,
     pub pairing: Mutex<Pairing>,
     pub sessions: Mutex<HashMap<String, Session>>,
     pub connections: Mutex<HashMap<String, Connection>>,
@@ -68,7 +81,7 @@ pub struct Engine {
     pub native_token: Option<String>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Upload {
     pub path: String,
     pub size: u64,
@@ -79,18 +92,46 @@ pub struct Running {
     pub address: SocketAddr,
     handle: axum_server::Handle,
     task: tokio::task::JoinHandle<()>,
+    follow: tokio::task::JoinHandle<()>,
 }
 
 impl Running {
     pub fn shutdown(&self) {
         self.handle.shutdown();
+        self.follow.abort();
+    }
+
+    /// Shuts down and waits (up to five seconds) until connection and transfer
+    /// tasks have released the engine, so its database can be opened again.
+    pub async fn stop(self) {
+        let engine = Arc::downgrade(&self.engine);
+        drop(self);
+        for _ in 0..500 {
+            if engine.strong_count() == 0 {
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        eprintln!("Drift engine tasks are still finishing after shutdown");
     }
 }
 impl Drop for Running {
     fn drop(&mut self) {
         self.handle.shutdown();
         self.task.abort();
+        self.follow.abort();
     }
+}
+
+pub struct Options {
+    pub root: PathBuf,
+    pub name: String,
+    pub host: String,
+    /// Port 0 reuses this device's previous port when it is free.
+    pub bind: SocketAddr,
+    pub discover: bool,
+    /// Visible folder for verified received files; see `Store::inbox`.
+    pub inbox: Option<PathBuf>,
 }
 
 pub async fn start(
@@ -100,33 +141,75 @@ pub async fn start(
     bind: SocketAddr,
     discover: bool,
 ) -> Result<Running> {
+    launch(Options {
+        root,
+        name,
+        host,
+        bind,
+        discover,
+        inbox: None,
+    })
+    .await
+}
+
+pub async fn launch(options: Options) -> Result<Running> {
+    let Options {
+        root,
+        name,
+        host,
+        bind,
+        discover,
+        inbox,
+    } = options;
     let _ = rustls::crypto::ring::default_provider().install_default();
     ensure!(
         !name.trim().is_empty() && name.len() <= 100,
         "Device name must be 1–100 bytes"
     );
-    let certified = rcgen::generate_simple_self_signed(vec![
-        host.clone(),
-        "localhost".into(),
-        "127.0.0.1".into(),
-    ])?;
-    let fingerprint = hex::encode(Sha256::digest(certified.cert.der()));
-    let tls = axum_server::tls_rustls::RustlsConfig::from_pem(
-        certified.cert.pem().into_bytes(),
-        certified.key_pair.serialize_pem().into_bytes(),
+    let mut store = Store::open(root)?;
+    store.inbox = inbox;
+    let mut identity = identity::Identity::load_or_create(&store.root)?;
+    let tls = axum_server::tls_rustls::RustlsConfig::from_der(
+        vec![identity.certificate.clone()],
+        identity.key.clone(),
     )
     .await?;
-    let listener = std::net::TcpListener::bind(bind)?;
+    let remembered = SocketAddr::new(bind.ip(), identity.port);
+    let listener = match (bind.port(), identity.port) {
+        (0, port) if port > 0 => std::net::TcpListener::bind(remembered)
+            .or_else(|_| std::net::TcpListener::bind(bind))?,
+        _ => std::net::TcpListener::bind(bind)?,
+    };
     listener.set_nonblocking(true)?;
     let address = listener.local_addr()?;
+    if bind.port() == 0 {
+        identity.remember_port(&store.root, address.port())?;
+    }
+    let devices: HashMap<_, _> = store
+        .devices()?
+        .into_iter()
+        .map(|device| (device.id.clone(), device))
+        .collect();
+    let connections = devices
+        .values()
+        .filter_map(|device| {
+            Connection::restore(device)
+                .map_err(|error| eprintln!("Skipping remembered device {}: {error}", device.name))
+                .ok()
+                .map(|connection| (device.id.clone(), connection))
+        })
+        .collect();
     let engine = Arc::new(Engine {
         name,
-        fingerprint,
+        fingerprint: identity.fingerprint.clone(),
+        port: address.port(),
+        devices: std::sync::Mutex::new(devices),
+        outgoing_pairs: std::sync::Mutex::new(HashMap::new()),
         pairing: Mutex::new(Pairing::new(host.clone(), address.port())),
         sessions: Mutex::new(HashMap::new()),
-        connections: Mutex::new(HashMap::new()),
+        connections: Mutex::new(connections),
         owners: Mutex::new(HashMap::new()),
-        store: Store::open(root)?,
+        store,
         writes: Mutex::new(()),
         sending: Mutex::new(()),
         uploads: Mutex::new(HashMap::new()),
@@ -142,12 +225,8 @@ pub async fn start(
             .filter(|value| value.len() == 64),
     });
     if discover {
-        match discovery::Discovery::start(
-            &uuid::Uuid::new_v4().to_string(),
-            &engine.name,
-            &host,
-            address.port(),
-        ) {
+        match discovery::Discovery::start(&engine.fingerprint, &engine.name, &host, address.port())
+        {
             Ok(d) => *engine.discovery.lock().unwrap() = Some(d),
             Err(e) => *engine.discovery_error.lock().unwrap() = Some(e.to_string()),
         }
@@ -162,6 +241,7 @@ pub async fn start(
         .route("/transfer/{id}", get(transfer_status))
         .route("/transfer/{id}/finish", post(finish))
         .route("/transfer/{id}/control", post(peer_control))
+        .route("/forget", post(forget))
         .route(
             "/transfer/{id}/{index}",
             put(chunk).layer(DefaultBodyLimit::max(model::CHUNK)),
@@ -172,22 +252,73 @@ pub async fn start(
                 .layer::<_, std::convert::Infallible>(DefaultBodyLimit::max(model::WINDOW))
                 .layer(tower::limit::ConcurrencyLimitLayer::new(1)),
         )
+        .layer(middleware::from_fn_with_state(
+            engine.clone(),
+            follow_caller,
+        ))
         .layer(DefaultBodyLimit::max(model::MAX_METADATA))
         .layer(tower::limit::ConcurrencyLimitLayer::new(4))
         .with_state(engine.clone());
     let handle = axum_server::Handle::new();
     let server = axum_server::from_tcp_rustls(listener, tls).handle(handle.clone());
     let task = tokio::spawn(async move {
-        if let Err(e) = server.serve(router.into_make_service()).await {
+        if let Err(e) = server
+            .serve(router.into_make_service_with_connect_info::<SocketAddr>())
+            .await
+        {
             eprintln!("TLS listener stopped: {e}");
         }
     });
+    let follow = tokio::spawn(follow_discovered(engine.clone()));
     Ok(Running {
         engine,
         address,
         handle,
         task,
+        follow,
     })
+}
+
+// Remembered devices move between addresses (DHCP, another network). Their
+// pinned identity does not, so following an unauthenticated mDNS answer can
+// only fail to connect; it cannot hand a transfer to another device.
+async fn follow_discovered(engine: Shared) {
+    loop {
+        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        let seen: Vec<_> = engine
+            .discovery
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|d| d.peers.lock().unwrap().values().cloned().collect())
+            .unwrap_or_default();
+        for peer in seen {
+            engine.moved(&peer.id, &peer.host, peer.port).await;
+        }
+    }
+}
+
+// A remembered device calling us shows where it is now; its port is stable.
+async fn follow_caller(
+    State(engine): State<Shared>,
+    ConnectInfo(remote): ConnectInfo<SocketAddr>,
+    request: Request,
+    next: Next,
+) -> Response {
+    let device = bearer(request.headers()).and_then(|token| engine.trusted_by_capability(token));
+    if let Some(device) = device {
+        engine
+            .moved(&device.id, &remote.ip().to_string(), device.port)
+            .await;
+    }
+    next.run(request).await
+}
+
+fn bearer(headers: &HeaderMap) -> Option<&str> {
+    headers
+        .get("authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
 }
 
 #[derive(Deserialize)]
@@ -207,8 +338,16 @@ async fn challenge(
 }
 async fn pair(
     State(engine): State<Shared>,
+    ConnectInfo(remote): ConnectInfo<SocketAddr>,
     Json(request): Json<PairRequest>,
 ) -> ApiResult<Json<PairReply>> {
+    if let Some(device) = &request.device {
+        device.validate()?;
+        check(
+            device.id != engine.fingerprint,
+            "A device cannot pair with itself",
+        )?;
+    }
     let mut sessions = engine.sessions.lock().await;
     check(
         sessions.len() < 64,
@@ -228,6 +367,9 @@ async fn pair(
         confirmed: false,
         created: now(),
         capability: capability.clone(),
+        device: request
+            .device
+            .map(|device| (device, remote.ip().to_string())),
     };
     let id = session.id.clone();
     sessions.insert(id.clone(), session);
@@ -235,6 +377,7 @@ async fn pair(
         session: id,
         capability,
         name: engine.name.clone(),
+        os: std::env::consts::OS.into(),
     }))
 }
 
@@ -254,17 +397,80 @@ impl Engine {
                     .join(index.to_string())
             })
     }
+    pub fn trusted_by_capability(&self, token: &str) -> Option<TrustedDevice> {
+        let hash = capability_hash(token);
+        self.devices
+            .lock()
+            .unwrap()
+            .values()
+            .find(|device| constant_eq(&device.incoming, &hash))
+            .cloned()
+    }
+
+    /// Remembers that a paired device is now at `host:port`.
+    pub async fn moved(&self, id: &str, host: &str, port: u16) {
+        let device = {
+            let mut devices = self.devices.lock().unwrap();
+            let Some(device) = devices.get_mut(id) else {
+                return;
+            };
+            if device.host == host && device.port == port {
+                return;
+            }
+            device.host = host.to_owned();
+            device.port = port;
+            device.clone()
+        };
+        if let Some(connection) = self.connections.lock().await.get_mut(id)
+            && let Err(error) = connection.moved(host, port)
+        {
+            eprintln!("Ignoring address for {}: {error}", device.name);
+            return;
+        }
+        if let Err(error) = self.store.save_device(&device) {
+            eprintln!(
+                "Could not remember the new address of {}: {error}",
+                device.name
+            );
+        }
+    }
+
     pub async fn auth(&self, headers: &HeaderMap, approved: bool) -> Result<Session> {
-        let token = headers
-            .get("authorization")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.strip_prefix("Bearer "))
-            .context("Authentication required")?;
+        let token = bearer(headers).context("Authentication required")?;
+        if let Some(device) = self.trusted_by_capability(token) {
+            return Ok(Session {
+                id: device.id,
+                name: device.name,
+                approved: true,
+                confirmed: true,
+                created: now(),
+                capability: String::new(),
+                device: None,
+            });
+        }
+        // We asked this device to pair; it may send to us as soon as it approves.
+        if let Some((id, name)) = self
+            .outgoing_pairs
+            .lock()
+            .unwrap()
+            .get(&capability_hash(token))
+            .cloned()
+        {
+            return Ok(Session {
+                id,
+                name,
+                approved: true,
+                confirmed: true,
+                created: now(),
+                capability: String::new(),
+                device: None,
+            });
+        }
         let sessions = self.sessions.lock().await;
         let session = sessions
             .values()
             .find(|s| constant_eq(&s.capability, token))
-            .context("Invalid session")?;
+            .context("This device is not paired with this one. Pair them again.")?;
         ensure!(
             now().saturating_sub(session.created) < 86400,
             "Session expired; pair again"
@@ -276,6 +482,30 @@ impl Engine {
             );
         }
         Ok(session.clone())
+    }
+
+    /// Remembers a device the user approved, so either side can send later.
+    pub async fn trust(&self, device: TrustedDevice) -> Result<()> {
+        let connection = Connection::restore(&device)?;
+        self.store.save_device(&device)?;
+        self.connections
+            .lock()
+            .await
+            .insert(device.id.clone(), connection);
+        self.devices
+            .lock()
+            .unwrap()
+            .insert(device.id.clone(), device);
+        Ok(())
+    }
+
+    /// Forgets a paired device on this side only.
+    pub async fn forget(&self, id: &str) -> Result<()> {
+        self.store.remove_device(id)?;
+        self.devices.lock().unwrap().remove(id);
+        self.connections.lock().await.remove(id);
+        self.owners.lock().await.retain(|_, owner| owner != id);
+        Ok(())
     }
 
     pub async fn owned(&self, headers: &HeaderMap, id: &str) -> Result<()> {
@@ -551,6 +781,9 @@ async fn session_status(
 }
 async fn confirm(State(engine): State<Shared>, headers: HeaderMap) -> ApiResult<Json<Session>> {
     let session = engine.auth(&headers, false).await?;
+    if session.confirmed {
+        return Ok(Json(session));
+    }
     let mut sessions = engine.sessions.lock().await;
     let session = sessions.get_mut(&session.id).context("Session missing")?;
     check(session.approved, "Approve on the receiving device first")?;
@@ -604,7 +837,14 @@ async fn offer(
         transfer.offsets = transfer.entries.iter().map(|entry| entry.size).collect();
     }
     if engine.owners.lock().await.get(&id) != Some(&session.id) || transfer.status != "complete" {
-        transfer.status = "pending".into();
+        // Files from the user's own remembered devices need no second approval.
+        let own = engine
+            .devices
+            .lock()
+            .unwrap()
+            .get(&session.id)
+            .is_some_and(|device| device.own);
+        transfer.status = if own { "receiving" } else { "pending" }.into();
         transfer.peer = session.name;
         transfer.updated = now();
     }
@@ -733,4 +973,16 @@ async fn peer_control(
     transfer.updated = now();
     engine.store.save(&transfer)?;
     Ok(Json(transfer))
+}
+
+// The other device forgot us: forget it too, so neither side keeps a one-way trust.
+async fn forget(
+    State(engine): State<Shared>,
+    headers: HeaderMap,
+) -> ApiResult<Json<serde_json::Value>> {
+    let session = engine.auth(&headers, false).await?;
+    if engine.devices.lock().unwrap().contains_key(&session.id) {
+        engine.forget(&session.id).await?;
+    }
+    Ok(Json(serde_json::json!({"ok": true})))
 }
