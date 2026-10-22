@@ -21,10 +21,13 @@ impl Discovery {
             ("id", id),
             ("v", "1"),
         ];
+        // DNS labels stop at 63 bytes; a fingerprint is 64 hex characters. Its
+        // first 128 bits name the service, and the TXT record carries it whole.
+        let label = &id[..id.len().min(32)];
         let info = ServiceInfo::new(
             "_drift._tcp.local.",
-            id,
-            &format!("drift-{id}.local."),
+            label,
+            &format!("drift-{label}.local."),
             host,
             port,
             &properties[..],

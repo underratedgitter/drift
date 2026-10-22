@@ -32,3 +32,5 @@ history.redb*
 /outbox/
 /partial/
 /publishing/
+/target/
+src-tauri/gen/schemas/

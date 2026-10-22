@@ -15,9 +15,13 @@
 //
 // Needs TYPESAFE_API_KEY (environment, or an `export TYPESAFE_API_KEY=...` line
 // in ~/.zshrc). The key is never printed or written.
+/* global fetch, AbortSignal */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
+import console from 'node:console';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const MODEL = 'jev-1.14.0';
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
@@ -237,7 +241,7 @@ async function ask(key, body, attempt = 0) {
   const response = await fetch(ENDPOINT, { method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: AbortSignal.timeout(90_000) });
   if ((response.status === 429 || response.status === 529 || response.status >= 500) && attempt < 5) {
     const wait = Number(response.headers.get('retry-after')) * 1000 || 500 * 2 ** attempt;
-    await new Promise(resolve => setTimeout(resolve, wait));
+    await delay(wait);
     return ask(key, body, attempt + 1);
   }
   if (!response.ok) throw new Error(`Jev request failed with HTTP ${response.status}: ${(await response.text()).slice(0, 500)}`);
@@ -325,9 +329,9 @@ async function main() {
   const models = [...new Set(answered.map(item => item.model))];
   const summary = { model: models, askedAt: new Date().toISOString(), requests: jobs.length, inputTokens: usage, thresholds: { MUST, SHOULD, DEAL_BREAKER }, variantSummary, importance, internetGain, design, context, adoption };
   await writeFile(path.join(output, 'requests.json'), JSON.stringify({ personas, features, common, internetFeature, adoptionQuestions, designQuestions, diagnosisQuestions, contextQuestions }, null, 2) + '\n');
-  await writeFile(path.join(output, 'answers.json'), JSON.stringify(answered.map(({ body: _body, ...item }) => item), null, 2) + '\n');
+  await writeFile(path.join(output, 'answers.json'), JSON.stringify(answered.map(item => { const copy = { ...item }; delete copy.body; return copy; }), null, 2) + '\n');
   await writeFile(path.join(output, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
-  console.log(JSON.stringify({ variantSummary, importance: importance.map(({ drops: _drops, ...item }) => item), internetGain, design: Object.fromEntries(Object.entries(design).map(([id, value]) => [id, { winner: value.winner, overall: value.overall }])), context: Object.fromEntries(Object.entries(context).map(([id, value]) => [id, value.mean])), inputTokens: usage, models }, null, 2));
+  console.log(JSON.stringify({ variantSummary, importance: importance.map(item => { const copy = { ...item }; delete copy.drops; return copy; }), internetGain, design: Object.fromEntries(Object.entries(design).map(([id, value]) => [id, { winner: value.winner, overall: value.overall }])), context: Object.fromEntries(Object.entries(context).map(([id, value]) => [id, value.mean])), inputTokens: usage, models }, null, 2));
 }
 
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

@@ -1035,8 +1035,9 @@ fn mdns_discovery_lifecycle() {
     let socket = std::net::UdpSocket::bind("0.0.0.0:0").unwrap();
     socket.connect("192.0.2.1:80").unwrap();
     let host = socket.local_addr().unwrap().ip().to_string();
-    let id_a = uuid::Uuid::new_v4().to_string();
-    let id_b = uuid::Uuid::new_v4().to_string();
+    // Real identifiers: 64-hex-character certificate fingerprints.
+    let id_a = secret(32);
+    let id_b = secret(32);
     let a = drift_engine::discovery::Discovery::start(&id_a, "Test A", &host, 9518).unwrap();
     let b = drift_engine::discovery::Discovery::start(&id_b, "Test B", &host, 9519).unwrap();
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Drift",
+  "version": "0.3.0",
+  "identifier": "dev.drift.transfer",
+  "build": {
+    "frontendDist": "../dist/ui",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev:ui",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Drift",
+        "width": 1180,
+        "height": 820,
+        "minWidth": 380,
+        "minHeight": 560,
+        "backgroundColor": "#000000",
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'self'",
+        "img-src": "'self' data:",
+        "style-src": "'self' 'unsafe-inline'",
+        "script-src": "'self'",
+        "connect-src": "ipc: http://ipc.localhost",
+        "frame-ancestors": "'none'",
+        "base-uri": "'none'",
+        "form-action": "'none'"
+      },
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Utility",
+    "shortDescription": "Send files between your own devices",
+    "longDescription": "Drift sends files and folders directly between your phones and computers over your Wi-Fi or hotspot. Encrypted, verified on arrival, no account and no cloud.",
+    "copyright": "Drift contributors",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["drift"] },
+      "mobile": [{ "scheme": ["drift"], "appLink": false }]
+    }
+  }
+}

@@ -15,7 +15,7 @@ pub struct Source {
     pub source: PathBuf,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Selection {
     pub id: String,
     pub files: Vec<Upload>,

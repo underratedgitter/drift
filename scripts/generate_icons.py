@@ -33,6 +33,8 @@ output = Path(__file__).resolve().parent.parent / 'public/icons'
 output.mkdir(parents=True, exist_ok=True)
 for size in (192, 512):
     (output / f'phone-{size}.png').write_bytes(png(size))
-ios = output.parent.parent / 'native/ios/Assets.xcassets/AppIcon.appiconset'
-ios.mkdir(parents=True, exist_ok=True)
-(ios / 'AppIcon.png').write_bytes(png(1024, rounded=False))
+# Source for `npx tauri icon src-tauri/icons/source.png`, which derives the
+# macOS, Windows, Linux, Android and iOS icon sets.
+app = output.parent.parent / 'src-tauri/icons'
+app.mkdir(parents=True, exist_ok=True)
+(app / 'source.png').write_bytes(png(1024))
