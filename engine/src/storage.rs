@@ -605,6 +605,31 @@ fn free_name(
     anyhow::bail!("Too many files named {name} in {}", inbox.display())
 }
 
+/// Create `dir` and any missing ancestors below `base`, refusing to traverse
+/// symlinks. A link planted inside the receive folder must not redirect a
+/// delivery somewhere else on the disk.
+async fn create_dirs_beneath(base: &Path, dir: &Path) -> Result<()> {
+    let relative = dir
+        .strip_prefix(base)
+        .with_context(|| format!("{} is outside {}", dir.display(), base.display()))?;
+    let mut current = base.to_path_buf();
+    for component in relative.components() {
+        current.push(component);
+        match tokio::fs::symlink_metadata(&current).await {
+            Ok(meta) => ensure!(
+                meta.is_dir(),
+                "Refusing to deliver through {}: not a plain directory",
+                current.display()
+            ),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                tokio::fs::create_dir(&current).await?;
+            }
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Ok(())
+}
+
 /// Never replaces an existing file: hard links fail if the target exists, and
 /// the copy fallback (other volume, Android) opens with create_new.
 async fn link_or_copy(source: &Path, target: &Path) -> std::io::Result<()> {
@@ -669,6 +694,13 @@ impl Store {
                 None => PathBuf::from(root),
             };
             let source = published.join(&entry.path);
+            if let Ok(meta) = tokio::fs::symlink_metadata(&target).await {
+                ensure!(
+                    !meta.file_type().is_symlink(),
+                    "Refusing to deliver onto the symlink {}",
+                    target.display()
+                );
+            }
             if !source.exists() {
                 // Moved before an interruption; the delivered copy must be intact.
                 ensure!(
@@ -679,7 +711,7 @@ impl Store {
                 continue;
             }
             if let Some(parent) = target.parent() {
-                tokio::fs::create_dir_all(parent).await?;
+                create_dirs_beneath(&inbox, parent).await?;
             }
             match link_or_copy(&source, &target).await {
                 Ok(()) => {}
@@ -746,5 +778,19 @@ mod tests {
             ]),
             vec![("Trip".to_owned(), true), ("notes.txt".to_owned(), false)]
         );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn delivery_refuses_to_follow_symlinked_folders() {
+        let inbox = tempfile::tempdir().unwrap();
+        let outside = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), inbox.path().join("photos")).unwrap();
+
+        let error = create_dirs_beneath(inbox.path(), &inbox.path().join("photos"))
+            .await
+            .unwrap_err();
+
+        assert!(error.to_string().contains("not a plain directory"));
     }
 }

@@ -24,6 +24,19 @@ async fn device(root: &Path) -> drift_engine::Running {
     .await
     .unwrap()
 }
+
+async fn device_with_inbox(root: &Path, inbox: &Path) -> drift_engine::Running {
+    drift_engine::launch(drift_engine::Options {
+        root: root.to_owned(),
+        name: "Test device".into(),
+        host: "127.0.0.1".into(),
+        bind: SocketAddr::from(([127, 0, 0, 1], 0)),
+        discover: false,
+        inbox: Some(inbox.to_owned()),
+    })
+    .await
+    .unwrap()
+}
 async fn paired(device: &drift_engine::Running) -> Connection {
     let invitation = device.engine.pairing.lock().await.invitation.clone();
     let connection = Connection::pair(&invitation, "Sender").await.unwrap();
@@ -209,6 +222,39 @@ async fn real_tls_folder_transfer_verifies_hash_and_rejects_bad_offsets() {
         0
     );
     assert!(connection.chunk(&transfer.id, 0, 0, vec![1]).await.is_err());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn delivery_refuses_symlinked_folders_in_the_inbox() {
+    let root = tempfile::tempdir().unwrap();
+    let inbox = tempfile::tempdir().unwrap();
+    let outside = tempfile::tempdir().unwrap();
+    std::os::unix::fs::symlink(outside.path(), inbox.path().join("photos")).unwrap();
+
+    let receiver = device_with_inbox(root.path(), inbox.path()).await;
+    let connection = paired(&receiver).await;
+    let bytes = b"do not escape";
+    let transfer = offer(&receiver, &connection, &[entry("photos/leak.txt", bytes)]).await;
+    connection
+        .chunk(&transfer.id, 0, 0, bytes.to_vec())
+        .await
+        .unwrap();
+
+    let finished: Transfer = connection
+        .post(&format!("/transfer/{}/finish", transfer.id), &())
+        .await
+        .unwrap();
+
+    assert_eq!(finished.status, "complete");
+    // The symlinked name is skipped, never traversed.
+    assert!(!outside.path().join("leak.txt").exists());
+    assert_eq!(
+        tokio::fs::read(inbox.path().join("photos (2)").join("leak.txt"))
+            .await
+            .unwrap(),
+        bytes
+    );
 }
 
 #[tokio::test]
