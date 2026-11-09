@@ -1,6 +1,6 @@
 use crate::model::{CHUNK, Entry, MAX_FILES, Transfer, TrustedDevice};
 use anyhow::{Context, Result, ensure};
-use redb::{Database, ReadableTable, TableDefinition};
+use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use std::{
     collections::HashSet,
     path::{Component, Path, PathBuf},

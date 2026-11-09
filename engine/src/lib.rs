@@ -97,7 +97,7 @@ struct Introductions {
 pub struct Running {
     pub engine: Shared,
     pub address: SocketAddr,
-    handle: axum_server::Handle,
+    handle: axum_server::Handle<SocketAddr>,
     task: tokio::task::JoinHandle<()>,
     follow: tokio::task::JoinHandle<()>,
 }
@@ -266,7 +266,7 @@ pub async fn launch(options: Options) -> Result<Running> {
         .layer(tower::limit::ConcurrencyLimitLayer::new(4))
         .with_state(engine.clone());
     let handle = axum_server::Handle::new();
-    let server = axum_server::from_tcp_rustls(listener, tls).handle(handle.clone());
+    let server = axum_server::from_tcp_rustls(listener, tls)?.handle(handle.clone());
     let task = tokio::spawn(async move {
         if let Err(e) = server
             .serve(router.into_make_service_with_connect_info::<SocketAddr>())
@@ -879,7 +879,7 @@ impl Engine {
 }
 
 pub fn constant_eq(a: &str, b: &str) -> bool {
-    use hmac::{Hmac, Mac};
+    use hmac::{Hmac, KeyInit, Mac};
     let mut first = Hmac::<Sha256>::new_from_slice(b"drift constant time comparison").unwrap();
     first.update(a.as_bytes());
     let mut second = Hmac::<Sha256>::new_from_slice(b"drift constant time comparison").unwrap();

@@ -55,7 +55,7 @@ impl Identity {
                 let generated = rcgen::generate_simple_self_signed(vec!["drift.local".into()])?;
                 let identity = Self {
                     certificate: generated.cert.der().to_vec(),
-                    key: generated.key_pair.serialize_der(),
+                    key: generated.signing_key.serialize_der(),
                     fingerprint: fingerprint(generated.cert.der()),
                     port: 0,
                 };

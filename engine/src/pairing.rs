@@ -1,13 +1,13 @@
 use crate::model::{Invitation, PairRequest, now};
 use anyhow::{Result, bail, ensure};
-use hmac::{Hmac, Mac};
-use rand::RngCore;
+use hmac::{Hmac, KeyInit, Mac};
+use rand::Rng;
 use sha2::Sha256;
 use std::collections::HashSet;
 
 pub fn secret(bytes: usize) -> String {
     let mut value = vec![0; bytes];
-    rand::thread_rng().fill_bytes(&mut value);
+    rand::rng().fill_bytes(&mut value);
     hex::encode(value)
 }
 
