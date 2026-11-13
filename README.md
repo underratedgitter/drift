@@ -81,6 +81,7 @@ npm run typecheck && npm run lint
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace     # engine over real TLS sockets, plus the app's IPC
+npm run test:tools
 npx playwright install chromium && npm run test:ui
 ```
 
