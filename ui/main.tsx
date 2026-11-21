@@ -94,13 +94,18 @@ function App() {
   const [ownChoice, setOwnChoice] = useState<Record<string, boolean>>({});
   const [rates, setRates] = useState<Record<string, number>>({});
   const previous = useRef<{ time: number; transfers: Transfer[] } | null>(null);
+  const reported = useRef<string | null>(null);
   const filePicker = useRef<HTMLInputElement>(null);
   const folderPicker = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
 
   const refresh = useCallback(async () => {
     const next = await api<Snapshot>('/state');
-    if (next.lastError) setError(explain(next.lastError));
+    // The engine reports a failure until the next send, so show each one once; a dismissed error must not return.
+    if (next.lastError !== reported.current) {
+      reported.current = next.lastError;
+      if (next.lastError) setError(explain(next.lastError));
+    }
     const timestamp = performance.now();
     const before = previous.current;
     if (before) {

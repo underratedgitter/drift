@@ -446,3 +446,155 @@ async fn a_reveal_that_does_not_match_its_commitment_is_rejected_once_and_for_al
             .is_empty()
     );
 }
+
+const BATCH_LIMIT: usize = 100;
+const SESSION_LIMIT: usize = 64;
+const SESSION_LIFETIME: u64 = 86400;
+
+async fn select_one(engine: &Shared, file: &Path) -> Result<String, String> {
+    let sources = selection::collect(&[file.to_owned()]).unwrap();
+    selection::select(engine, sources)
+        .await
+        .map(|batch| batch.id)
+        .map_err(|error| error.to_string())
+}
+
+#[tokio::test]
+async fn choosing_files_after_many_selections_forgets_the_oldest_batch_but_not_its_files() {
+    let (root, files) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let device = launch(root.path(), "Laptop", None).await;
+    let file = files.path().join("photo.jpg");
+    std::fs::write(&file, b"photo").unwrap();
+    let mut ids = Vec::new();
+    for _ in 0..BATCH_LIMIT {
+        ids.push(select_one(&device.engine, &file).await.unwrap());
+    }
+    let newest = select_one(&device.engine, &file).await.unwrap();
+    let uploads = device.engine.uploads.lock().await;
+    assert_eq!(uploads.len(), BATCH_LIMIT);
+    assert!(!uploads.contains_key(&ids[0]));
+    assert!(uploads.contains_key(&ids[1]) && uploads.contains_key(&newest));
+    assert!(
+        !device
+            .engine
+            .native_sources
+            .lock()
+            .await
+            .contains_key(&ids[0])
+    );
+    assert!(file.exists(), "the person's own file must never be deleted");
+}
+
+#[tokio::test]
+async fn staged_batches_are_evicted_with_their_prepared_copies() {
+    let root = tempfile::tempdir().unwrap();
+    let device = launch(root.path(), "Laptop", None).await;
+    let mut ids = Vec::new();
+    for _ in 0..BATCH_LIMIT {
+        let reply = call(
+            &device.engine,
+            "/batch",
+            Some(json!([{"path": "a.txt", "size": 1}])),
+        )
+        .await
+        .unwrap();
+        ids.push(reply["id"].as_str().unwrap().to_owned());
+    }
+    call(
+        &device.engine,
+        "/batch",
+        Some(json!([{"path": "a.txt", "size": 1}])),
+    )
+    .await
+    .unwrap();
+    let outbox = root.path().join("outbox");
+    assert!(!outbox.join(&ids[0]).exists());
+    assert!(outbox.join(&ids[1]).exists());
+    assert_eq!(device.engine.uploads.lock().await.len(), BATCH_LIMIT);
+}
+
+#[tokio::test]
+async fn no_batch_is_forgotten_while_a_send_may_be_reading_it() {
+    let (root, files) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let device = launch(root.path(), "Laptop", None).await;
+    let file = files.path().join("photo.jpg");
+    std::fs::write(&file, b"photo").unwrap();
+    let mut first = String::new();
+    for _ in 0..BATCH_LIMIT {
+        let id = select_one(&device.engine, &file).await.unwrap();
+        if first.is_empty() {
+            first = id;
+        }
+    }
+    let sending = device.engine.sending.lock().await;
+    let error = select_one(&device.engine, &file).await.unwrap_err();
+    assert!(error.contains("current send"), "{error}");
+    assert!(device.engine.uploads.lock().await.contains_key(&first));
+    drop(sending);
+    select_one(&device.engine, &file).await.unwrap();
+}
+
+#[tokio::test]
+async fn a_batch_that_was_just_sent_outlives_older_unused_ones() {
+    let (a, b, files) = (
+        tempfile::tempdir().unwrap(),
+        tempfile::tempdir().unwrap(),
+        tempfile::tempdir().unwrap(),
+    );
+    let sender = launch(a.path(), "Laptop", None).await;
+    let receiver = launch(b.path(), "Desktop", None).await;
+    pair(&sender.engine, &receiver.engine, true).await;
+    let file = files.path().join("photo.jpg");
+    std::fs::write(&file, b"photo").unwrap();
+    let first = select_one(&sender.engine, &file).await.unwrap();
+    let second = select_one(&sender.engine, &file).await.unwrap();
+    for _ in 2..BATCH_LIMIT {
+        select_one(&sender.engine, &file).await.unwrap();
+    }
+    let to = device_id(&state(&sender.engine).await);
+    call(
+        &sender.engine,
+        "/send",
+        Some(json!({"connection": to, "batch": first})),
+    )
+    .await
+    .unwrap();
+    completed(&sender.engine, "send", 1).await;
+    select_one(&sender.engine, &file).await.unwrap();
+    let uploads = sender.engine.uploads.lock().await;
+    assert!(
+        uploads.contains_key(&first),
+        "a batch that was resent is in use"
+    );
+    assert!(!uploads.contains_key(&second));
+}
+
+async fn request_pairing(from: &Shared, to: &Shared) -> Result<Value, String> {
+    let invitation = state(to).await["invitation"].clone();
+    call(from, "/pair", Some(invitation)).await
+}
+
+#[tokio::test]
+async fn pairing_requests_that_expired_do_not_keep_the_session_list_full() {
+    let (a, b) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let laptop = launch(a.path(), "Laptop", None).await;
+    let phone = launch(b.path(), "Phone", None).await;
+    for _ in 0..SESSION_LIMIT {
+        request_pairing(&phone.engine, &laptop.engine)
+            .await
+            .unwrap();
+    }
+    let full = request_pairing(&phone.engine, &laptop.engine)
+        .await
+        .unwrap_err();
+    assert!(full.contains("Too many sessions"), "{full}");
+
+    for session in laptop.engine.sessions.lock().await.values_mut() {
+        session.created -= SESSION_LIFETIME;
+    }
+    request_pairing(&phone.engine, &laptop.engine)
+        .await
+        .unwrap();
+    let sessions = state(&laptop.engine).await["sessions"].clone();
+    assert_eq!(sessions.as_array().unwrap().len(), 1);
+}

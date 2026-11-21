@@ -89,7 +89,7 @@ pub fn validate(entries: &[Entry]) -> Result<()> {
         );
         ensure!(
             entry.blake3.len() == 64 && hex::decode(&entry.blake3).is_ok(),
-            "Invalid SHA-256"
+            "Invalid BLAKE3 digest"
         );
         ensure!(
             paths.insert(entry.path.to_lowercase()),
@@ -346,12 +346,17 @@ impl Store {
 
     pub fn clear_history(&self) -> Result<()> {
         let tx = self.db.begin_write()?;
+        let mut removed = Vec::new();
         {
             let mut records = tx.open_table(RECORDS)?;
-            records.retain(|_, value| {
-                serde_json::from_str::<Transfer>(value)
+            records.retain(|id, value| {
+                let keep = serde_json::from_str::<Transfer>(value)
                     .map(|t| t.status != "complete" && t.status != "cancelled")
-                    .unwrap_or(true)
+                    .unwrap_or(true);
+                if !keep {
+                    removed.push(id.to_owned());
+                }
+                keep
             })?;
             let mut kept = HashSet::new();
             for row in records.iter()? {
@@ -362,6 +367,16 @@ impl Store {
                 .retain(|id, _| kept.contains(id))?;
         }
         tx.commit()?;
+        // A cancelled transfer is never resumed (the same files become a new
+        // transfer), so once its record is gone nothing points at its partial
+        // bytes. Delete them instead of leaving hidden gigabytes in the data folder.
+        for id in removed {
+            if let Err(error) = std::fs::remove_dir_all(self.root.join("partial").join(&id))
+                && error.kind() != std::io::ErrorKind::NotFound
+            {
+                eprintln!("Could not remove recovery files for {id}: {error}");
+            }
+        }
         Ok(())
     }
 
@@ -599,9 +614,12 @@ fn free_name(
 ) -> Result<PathBuf> {
     for n in 1..=1000 {
         let path = inbox.join(candidate(name, folder, n));
+        // Compared without case: on a case-insensitive volume "Trip" and "trip"
+        // are one folder, and two planned names must never share it.
+        let lowered = path.to_string_lossy().to_lowercase();
         let planned = taken
             .iter()
-            .any(|(_, existing)| Path::new(existing) == path);
+            .any(|(_, existing)| existing.to_lowercase() == lowered);
         if !planned && std::fs::symlink_metadata(&path).is_err() {
             return Ok(path);
         }
