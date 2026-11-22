@@ -436,10 +436,7 @@ async fn batch(
         .collect();
     validate(&dummy)?;
     let mut uploads = engine.uploads.lock().await;
-    check(
-        uploads.len() < 100,
-        "Outbox is full. Restart Drift and remove old outbox files.",
-    )?;
+    engine.make_room(&mut uploads).await?;
     let id = uuid::Uuid::new_v4().to_string();
     tokio::fs::create_dir_all(engine.store.root.join("outbox").join(&id)).await?;
     for index in 0..files.len() {
@@ -454,6 +451,7 @@ async fn batch(
         .await?;
     }
     uploads.insert(id.clone(), files);
+    engine.touch_batch(&id);
     Ok(Json(json!({"id":id})))
 }
 async fn stage(

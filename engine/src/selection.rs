@@ -108,13 +108,11 @@ pub async fn select(engine: &Shared, sources: Vec<Source>) -> Result<Selection> 
         .collect();
     validate(&entries)?;
     let mut batches = engine.uploads.lock().await;
-    check(
-        batches.len() < 100,
-        "Too many selected batches; restart Drift to clear them",
-    )?;
+    engine.make_room(&mut batches).await?;
     let id = uuid::Uuid::new_v4().to_string();
     engine.native_sources.lock().await.insert(id.clone(), paths);
     batches.insert(id.clone(), uploads.clone());
+    engine.touch_batch(&id);
     Ok(Selection { id, files: uploads })
 }
 

@@ -1144,3 +1144,114 @@ fn reopening_storage_clears_unreachable_prepared_copies() {
     Store::open(root.path().to_owned()).unwrap();
     assert!(!root.path().join("outbox").exists());
 }
+
+#[tokio::test]
+async fn folders_whose_names_differ_only_by_case_are_delivered_to_separate_folders() {
+    let root = tempfile::tempdir().unwrap();
+    let inbox = tempfile::tempdir().unwrap();
+    let (a, b) = (b"first folder", b"second folder");
+    let entries = vec![entry("Trip/a.txt", a), entry("trip/b.txt", b)];
+    validate(&entries).unwrap();
+    let mut store = Store::open(root.path().to_owned()).unwrap();
+    store.inbox = Some(inbox.path().to_owned());
+    let mut transfer = Transfer {
+        id: manifest_id(&entries),
+        entries,
+        offsets: vec![0, 0],
+        status: "receiving".into(),
+        peer: "peer".into(),
+        updated: 0,
+        error: None,
+        direction: "receive".into(),
+    };
+    store.write_chunk(&mut transfer, 0, 0, a).await.unwrap();
+    store.write_chunk(&mut transfer, 1, 0, b).await.unwrap();
+    store.finish(&mut transfer).await.unwrap();
+    // A case-insensitive volume would merge two such folders into one.
+    let saved = store.saved(&transfer.id).unwrap();
+    assert_eq!(saved.len(), 2);
+    assert_ne!(
+        saved[0].to_lowercase(),
+        saved[1].to_lowercase(),
+        "{saved:?}"
+    );
+}
+
+#[tokio::test]
+async fn clearing_history_frees_the_partial_files_of_cancelled_transfers() {
+    let root = tempfile::tempdir().unwrap();
+    let data = b"bytes that will never be resumed";
+    let entries = vec![entry("big.bin", data)];
+    let store = Store::open(root.path().to_owned()).unwrap();
+    let mut transfer = Transfer {
+        id: manifest_id(&entries),
+        entries,
+        offsets: vec![0],
+        status: "receiving".into(),
+        peer: "peer".into(),
+        updated: 0,
+        error: None,
+        direction: "receive".into(),
+    };
+    store
+        .write_chunk(&mut transfer, 0, 0, &data[..10])
+        .await
+        .unwrap();
+    transfer.status = "cancelled".into();
+    store.save(&transfer).unwrap();
+    // The same files offered again get a new transfer, so nothing resumes this one.
+    assert!(store.partial(&transfer.id, 0).exists());
+    store.clear_history().unwrap();
+    assert!(store.get(&transfer.id).is_err());
+    assert!(
+        !root.path().join("partial").join(&transfer.id).exists(),
+        "cancelled bytes stay on disk with no record that points to them"
+    );
+}
+
+#[tokio::test]
+async fn an_address_that_is_not_on_the_local_network_is_not_remembered() {
+    let root = tempfile::tempdir().unwrap();
+    let receiver = device(root.path()).await;
+    let id = "ab".repeat(32);
+    receiver
+        .engine
+        .trust(drift_engine::model::TrustedDevice {
+            id: id.clone(),
+            name: "Other Mac".into(),
+            os: "macos".into(),
+            host: "192.168.1.20".into(),
+            port: 4000,
+            outgoing: "cd".repeat(32),
+            incoming: "ef".repeat(32),
+            own: true,
+            added: 0,
+        })
+        .await
+        .unwrap();
+    // Discovery answers are unauthenticated, so a public address can be offered.
+    receiver.engine.moved(&id, "8.8.8.8", 4000).await;
+    let remembered = |engine: &drift_engine::Shared| {
+        (
+            engine.devices.lock().unwrap()[&id].host.clone(),
+            engine.store.devices().unwrap()[0].host.clone(),
+        )
+    };
+    assert_eq!(
+        remembered(&receiver.engine),
+        ("192.168.1.20".into(), "192.168.1.20".into())
+    );
+    receiver.engine.moved(&id, "192.168.1.21", 4000).await;
+    assert_eq!(
+        remembered(&receiver.engine),
+        ("192.168.1.21".into(), "192.168.1.21".into())
+    );
+}
+
+#[test]
+fn a_malformed_file_digest_is_reported_as_blake3() {
+    let mut bad = entry("a.txt", b"a");
+    bad.blake3 = "not a digest".into();
+    let error = validate(&[bad]).unwrap_err().to_string();
+    assert!(error.contains("BLAKE3"), "{error}");
+}

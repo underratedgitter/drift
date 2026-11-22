@@ -32,6 +32,10 @@ use tokio::sync::Mutex;
 use transport::{Connection, PairReply, ProofReply};
 
 pub type Shared = Arc<Engine>;
+const MAX_BATCHES: usize = 100;
+const MAX_SESSIONS: usize = 64;
+/// Seconds a pairing session stays usable.
+const SESSION_LIFETIME: u64 = 86400;
 pub type ApiResult<T> = std::result::Result<T, ApiError>;
 pub fn check(condition: bool, message: &str) -> Result<()> {
     ensure!(condition, "{message}");
@@ -79,6 +83,8 @@ pub struct Engine {
     pub last_error: Mutex<Option<String>>,
     pub send_controls: std::sync::Mutex<HashMap<String, String>>,
     pub native_sources: Mutex<HashMap<String, Vec<PathBuf>>>,
+    /// Batch ids, the one chosen or sent longest ago first.
+    batch_order: std::sync::Mutex<Vec<String>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -227,6 +233,7 @@ pub async fn launch(options: Options) -> Result<Running> {
         last_error: Mutex::new(None),
         send_controls: std::sync::Mutex::new(HashMap::new()),
         native_sources: Mutex::new(HashMap::new()),
+        batch_order: std::sync::Mutex::new(Vec::new()),
     });
     if discover {
         match discovery::Discovery::start(&engine.fingerprint, &engine.name, &host, address.port())
@@ -355,10 +362,7 @@ async fn pair(
         )?;
     }
     let mut sessions = engine.sessions.lock().await;
-    check(
-        sessions.len() < 64,
-        "Too many sessions; restart the app to clear sessions",
-    )?;
+    engine.make_room_for_session(&mut sessions).await?;
     let mut pairing = engine.pairing.lock().await;
     pairing.consume(&engine.fingerprint, &request)?;
     // A code works once; show a fresh one for the next device straight away
@@ -462,10 +466,7 @@ async fn reveal(
         "Pairing check failed. Tap the device again.",
     )?;
     let mut sessions = engine.sessions.lock().await;
-    check(
-        sessions.len() < 64,
-        "Too many sessions; restart the app to clear sessions",
-    )?;
+    engine.make_room_for_session(&mut sessions).await?;
     let capability = secret(32);
     let code = short_code(
         &engine.fingerprint,
@@ -494,6 +495,62 @@ async fn reveal(
 }
 
 impl Engine {
+    /// Makes room for one more session by forgetting the ones that expired,
+    /// and the transfer ownership they recorded.
+    pub async fn make_room_for_session(
+        &self,
+        sessions: &mut HashMap<String, Session>,
+    ) -> Result<()> {
+        if sessions.len() >= MAX_SESSIONS {
+            let time = now();
+            sessions.retain(|_, session| time.saturating_sub(session.created) < SESSION_LIFETIME);
+            self.owners
+                .lock()
+                .await
+                .retain(|_, owner| sessions.contains_key(owner));
+        }
+        ensure!(
+            sessions.len() < MAX_SESSIONS,
+            "Too many sessions; restart the app to clear sessions"
+        );
+        Ok(())
+    }
+
+    /// Marks a batch as the one most recently chosen or sent.
+    pub fn touch_batch(&self, id: &str) {
+        let mut order = self.batch_order.lock().unwrap();
+        order.retain(|other| other != id);
+        order.push(id.to_owned());
+    }
+
+    /// Makes room for one more batch by forgetting the one used longest ago, and
+    /// deleting its prepared copies. Chosen files are the person's own and stay.
+    /// Nothing is forgotten while a send runs, because it may be reading that batch.
+    pub async fn make_room(&self, uploads: &mut HashMap<String, Vec<Upload>>) -> Result<()> {
+        if uploads.len() < MAX_BATCHES {
+            return Ok(());
+        }
+        let _idle = self
+            .sending
+            .try_lock()
+            .ok()
+            .context("Too many selected batches; wait for the current send to finish")?;
+        let oldest = {
+            let mut order = self.batch_order.lock().unwrap();
+            (!order.is_empty()).then(|| order.remove(0))
+        }
+        .context("Too many selected batches")?;
+        uploads.remove(&oldest);
+        self.native_sources.lock().await.remove(&oldest);
+        if let Err(error) =
+            tokio::fs::remove_dir_all(self.store.root.join("outbox").join(&oldest)).await
+            && error.kind() != std::io::ErrorKind::NotFound
+        {
+            eprintln!("Could not remove prepared copies of {oldest}: {error}");
+        }
+        Ok(())
+    }
+
     pub async fn source_path(&self, batch: &str, index: usize) -> PathBuf {
         self.native_sources
             .lock()
@@ -521,24 +578,27 @@ impl Engine {
 
     /// Remembers that a paired device is now at `host:port`.
     pub async fn moved(&self, id: &str, host: &str, port: u16) {
+        let name = match self.devices.lock().unwrap().get(id) {
+            Some(device) if device.host != host || device.port != port => device.name.clone(),
+            _ => return,
+        };
+        // The connection checks the address first: one that it refuses must not
+        // be remembered, or it would be saved and break the device after a restart.
+        if let Some(connection) = self.connections.lock().await.get_mut(id)
+            && let Err(error) = connection.moved(host, port)
+        {
+            eprintln!("Ignoring address for {name}: {error}");
+            return;
+        }
         let device = {
             let mut devices = self.devices.lock().unwrap();
             let Some(device) = devices.get_mut(id) else {
                 return;
             };
-            if device.host == host && device.port == port {
-                return;
-            }
             device.host = host.to_owned();
             device.port = port;
             device.clone()
         };
-        if let Some(connection) = self.connections.lock().await.get_mut(id)
-            && let Err(error) = connection.moved(host, port)
-        {
-            eprintln!("Ignoring address for {}: {error}", device.name);
-            return;
-        }
         if let Err(error) = self.store.save_device(&device) {
             eprintln!(
                 "Could not remember the new address of {}: {error}",
@@ -586,7 +646,7 @@ impl Engine {
             .find(|s| constant_eq(&s.capability, token))
             .context("This device is not paired with this one. Pair them again.")?;
         ensure!(
-            now().saturating_sub(session.created) < 86400,
+            now().saturating_sub(session.created) < SESSION_LIFETIME,
             "Session expired; pair again"
         );
         if approved {
@@ -662,6 +722,7 @@ impl Engine {
             .get(batch)
             .cloned()
             .context("Select files again; this batch is no longer available")?;
+        self.touch_batch(batch);
         let mut entries = Vec::new();
         for (index, upload) in uploads.iter().enumerate() {
             let path = self.source_path(batch, index).await;

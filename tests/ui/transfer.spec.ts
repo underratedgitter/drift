@@ -169,3 +169,20 @@ test('wrong codes fail; files from someone else’s Mac wait for approval and ca
   await expect(sendPage.getByText('No transfers yet.', { exact: true })).toBeVisible();
   await receivePage.close(); await sendPage.close();
 });
+
+test('a declined pairing is reported once and stays dismissed', async ({ browser }) => {
+  const receiver = await start('Studio Mac');
+  const sender = await start('MacBook Air');
+  const receivePage = await browser.newPage();
+  const sendPage = await browser.newPage();
+  await receivePage.goto(receiver.url);
+  await sendPage.goto(sender.url);
+  await requestPairing(receivePage, sendPage);
+  await receivePage.getByRole('button', { name: 'Decline' }).click();
+  await expect(sendPage.getByRole('alert')).toBeVisible({ timeout: 15_000 });
+  await sendPage.getByRole('button', { name: 'Dismiss error' }).click();
+  // The engine keeps reporting the same failure until something else happens; it must not come back.
+  await sendPage.waitForTimeout(2500);
+  await expect(sendPage.getByRole('alert')).toHaveCount(0);
+  await receivePage.close(); await sendPage.close();
+});
